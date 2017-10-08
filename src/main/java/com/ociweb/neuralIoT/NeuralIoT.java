@@ -2,26 +2,34 @@ package com.ociweb.neuralIoT;
 
 import com.ociweb.pronghorn.neural.NeuralGraphBuilder;
 import com.ociweb.pronghorn.neural.StageFactory;
+import com.ociweb.pronghorn.pipe.MessageSchemaDynamic;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeConfig;
-import com.ociweb.pronghorn.pipe.RawDataSchema;
-import com.ociweb.pronghorn.stage.file.FileBlobReadStage;
-import com.ociweb.pronghorn.stage.route.ReplicatorStage;
+import com.ociweb.pronghorn.pipe.SchemalessFixedFieldPipeConfig;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
-import com.ociweb.pronghorn.stage.test.ConsoleJSONDumpStage;
-import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.util.MainArgs;
 
 public class NeuralIoT {
 
+	private static Appendable target;
+	
 	public static void main(String[] args) {
 		
+		//example to pull in a param
 		String inputFilePath = MainArgs.getOptArg("fileName", "-f", args, "./datafile.dat");
+		
+		target = null;//System.out;
 		
 		GraphManager gm = new GraphManager();
 		
-		populateGraph(gm, inputFilePath);
+		boolean useMatrix = false;
+		if (useMatrix) {
+			buildMatrixNeuralNet(gm);
+		} else {
+			buildVisualNeuralNet(gm);
+		}
+		
+		//TODO: add switch to turn off line notations to build cleaner picture?
 		
 		gm.enableTelemetry(8089);
 		
@@ -30,48 +38,38 @@ public class NeuralIoT {
 	}
 
 
-	private static void populateGraph(GraphManager gm, String inputFilePath) {
-				
-		Pipe<RawDataSchema> pipe1= RawDataSchema.instance.newPipe(10, 10_000); //10 chunks each 10K in  size
-		Pipe<RawDataSchema> pipe1A= RawDataSchema.instance.newPipe(20, 20_000); //10 chunks each 10K in  size
-		Pipe<RawDataSchema> pipe1B= RawDataSchema.instance.newPipe(20, 20_000); //10 chunks each 10K in  size
-		
-		
-		new FileBlobReadStage(gm, pipe1, inputFilePath); //This stage reads a file
-		
-		//This stage replicates the data to two pipes, great for debugging while passing on the real data.
-		new ReplicatorStage<>(gm, pipe1, pipe1A, pipe1B); 
-		
-		new ConsoleJSONDumpStage(gm, pipe1A); //see all the data at the console.
-		
-		new PipeCleanerStage(gm, pipe1B); //dumps all data which came in 
-		
-				
-	}
-
 	public static void buildMatrixNeuralNet(GraphManager gm) {
 		
+		//simple matrix of ints just multipied in pipeline
 		
 		
 	}
 	
 	public static void buildVisualNeuralNet(GraphManager gm) {
 
-		int nodes2 = 0;
 		
-		PipeConfig config = null;
-		StageFactory factory = new VisualStageFactory();
+		final SchemalessFixedFieldPipeConfig config = new SchemalessFixedFieldPipeConfig(32);
+		//config.hideLabels();
+		
+		final StageFactory<MessageSchemaDynamic> factory = new VisualStageFactory();
 		
 		
-		Pipe[] prevA = null;
-		NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodes2, factory);
+		int inputsCount = 5;		
+		Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
+		
+		DataProducerStage prodStage = new DataProducerStage(gm, prevA);
+		GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, 200_000, prodStage);	
+		
+		int nodesInLayerA = 3;
+		Pipe<MessageSchemaDynamic>[][] fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
 
-		Pipe[][] prevB = null;		
-		NeuralGraphBuilder.buildPipeLayer(gm, config, prevB, nodes2, factory);
+		int nodesInLayerB = 5;
+		Pipe<MessageSchemaDynamic>[][] fromB = NeuralGraphBuilder.buildPipeLayer(gm, config, fromA, nodesInLayerB, factory);
 		
-		Pipe[][] prevC = null;
-		NeuralGraphBuilder.lastPipeLayer(gm, prevC, factory);
-		
+		Pipe<MessageSchemaDynamic>[] fromC = NeuralGraphBuilder.lastPipeLayer(gm, fromB, factory);
+			
+		DataConsumerStage consStage = new DataConsumerStage(gm, fromC, target);
+		GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, 10_000, consStage);
 		
 	}
 	
