@@ -10,6 +10,10 @@ public class DataProducerStage extends PronghornStage {
 
 	private final Pipe<MessageSchemaDynamic>[] output;
 	
+	public static DataProducerStage newInstance(GraphManager gm, Pipe<MessageSchemaDynamic>[] output) {
+		return new DataProducerStage(gm, output);
+	}	
+	
 	public DataProducerStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] output) {
 		super(gm, NONE, output);
 		this.output = output;

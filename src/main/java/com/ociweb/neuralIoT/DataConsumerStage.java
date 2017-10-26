@@ -13,6 +13,10 @@ public class DataConsumerStage extends PronghornStage {
 	private final Pipe<MessageSchemaDynamic>[] input;
 	private AppendableProxy target;
 	
+	public static DataConsumerStage newInstance(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Appendable target) {
+		return new DataConsumerStage(gm, input, target);
+	}
+	
 	public DataConsumerStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Appendable target) {
 		super(gm,input,NONE);
 		this.input = input;
