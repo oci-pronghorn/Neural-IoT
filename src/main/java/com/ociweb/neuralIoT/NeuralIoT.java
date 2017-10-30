@@ -7,14 +7,11 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.SchemalessFixedFieldPipeConfig;
 import com.ociweb.pronghorn.stage.math.BuildMatrixCompute;
-import com.ociweb.pronghorn.stage.math.ConvertToDecimalStage;
-import com.ociweb.pronghorn.stage.math.DecimalSchema;
+import com.ociweb.pronghorn.stage.math.BuildMatrixCompute.MatrixTypes;
 import com.ociweb.pronghorn.stage.math.MatrixSchema;
 import com.ociweb.pronghorn.stage.math.RowSchema;
-import com.ociweb.pronghorn.stage.math.BuildMatrixCompute.MatrixTypes;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
-import com.ociweb.pronghorn.stage.test.ConsoleJSONDumpStage;
 import com.ociweb.pronghorn.util.MainArgs;
 
 public class NeuralIoT {
@@ -38,9 +35,7 @@ public class NeuralIoT {
 		} else {
 			buildVisualNeuralNet(gm);
 		}
-		
-		//TODO: add switch to turn off line notations to build cleaner picture?
-		
+
 		gm.enableTelemetry(8089);
 		
 		StageScheduler.defaultScheduler(gm).startup();
@@ -81,16 +76,8 @@ public class NeuralIoT {
 		MatrixWeightsProducerStage.newInstance(gm, type, weights1);
 		MatrixWeightsProducerStage.newInstance(gm, type, weights2);
 		MatrixWeightsProducerStage.newInstance(gm, type, weights3);
-		
-		//TODO: replicator is in the pipeline but is that required??
-		
-		//TODO: no need to dump this a dedicated stage to consume would be better
-		writeToConsole(gm, results);
-		
-        //TODO: the column converters need a flag to hold and re-use the last value so we only need to xmit once....
-		
+		MatrixDataConsumerStage.newInstance(gm, type, results);
 
-		
 	}
 
 
@@ -107,19 +94,6 @@ public class NeuralIoT {
 		return new Pipe<RowSchema<M>>(
 										  config);
 	
-	}
-
-
-	private static <M extends MatrixSchema<M>> void writeToConsole(GraphManager gm, Pipe<RowSchema<M>> rowResults) {
-		MatrixSchema resultSchema = rowResults.config().schema().rootSchema();
-		
-		DecimalSchema<M> result2Schema = new DecimalSchema<M>(resultSchema);
-		PipeConfig<DecimalSchema<M>> config = new PipeConfig<DecimalSchema<M>>(result2Schema, resultSchema.getRows());
-		config.hideLabels();
-		Pipe<DecimalSchema<M>> result2 = new Pipe<DecimalSchema<M>>(config);
-		ConvertToDecimalStage<M> watch = new ConvertToDecimalStage(gm, rowResults, result2);
-			
-		ConsoleJSONDumpStage dump = ConsoleJSONDumpStage.newInstance(gm,  result2, System.out);
 	}
 
 
