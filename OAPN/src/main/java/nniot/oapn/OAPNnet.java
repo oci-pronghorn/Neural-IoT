@@ -27,6 +27,7 @@ public class OAPNnet {
     static final int numTrainingRecords = 50;
     static final String testDataFN = "";
     static final String trainingDataFN = "";
+    static Boolean isTraining = false;
         
     public static void main(String[] args) {
         String [][] trainingData = new String[numTestRecords][numAttributes + 1];
@@ -64,28 +65,32 @@ public class OAPNnet {
     }
     
     //Incomplete, currently based on Nathan's tutorial
-    public static void buildVisualNeuralNet(GraphManager gm) {
+    public static void buildVisualNeuralNet(GraphManager gm, String[][] data) {
 		final SchemalessFixedFieldPipeConfig config = new SchemalessFixedFieldPipeConfig(32);
 		config.hideLabels();
 		
 		final StageFactory<MessageSchemaDynamic> factory = new VisualStageFactory();
 		
-		
-		int inputsCount = 5;		
-		Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
+                int inputsCount;
+                if(isTraining){
+		inputsCount = numAttributes;		
+                } else {
+                    inputsCount  = numAttributes + 1;
+                }
+                Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
 		
                 //TODO: refer to instance of our stage here
-		//DataProducerStage.newInstance(gm, prevA);
+		inputStage.newInstance(gm, data, prevA);
 			
-		int nodesInLayerA = 3;
+		int nodesInLayerA = inputsCount;
 		Pipe<MessageSchemaDynamic>[][] fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
 
-		int nodesInLayerB = 5;
+		int nodesInLayerB = inputsCount;
 		Pipe<MessageSchemaDynamic>[][] fromB = NeuralGraphBuilder.buildPipeLayer(gm, config, fromA, nodesInLayerB, factory);
 		
 		Pipe<MessageSchemaDynamic>[] fromC = NeuralGraphBuilder.lastPipeLayer(gm, fromB, factory);
 			
-                //TODO: refer to instance of our stage here
+                //TODO: refer to instance of our output stage here
 		//DataConsumerStage.newInstance(gm, fromC, target);
 		
 	}

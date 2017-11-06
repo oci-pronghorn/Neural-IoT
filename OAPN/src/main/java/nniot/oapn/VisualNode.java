@@ -100,9 +100,7 @@ public class VisualNode extends PronghornStage {
 		int i = output.length;
 		assert(i>0);
 		while (--i>=0) {
-			results = Math.min(results, 
-						       SchemalessPipe.roomRemaining(output[i])
-					);
+			results = Math.min(results, SchemalessPipe.roomRemaining(output[i]));
 		}
 		return results;
 	}
