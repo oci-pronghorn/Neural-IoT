@@ -10,7 +10,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-     <dependencies>
+    <dependencies>
     
         <dependency>
             <groupId>com.ociweb</groupId>
@@ -35,4 +35,18 @@
             <optional>false</optional>
         </dependency>
     </dependencies>
+    <repositories>
+        <repository>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <id>repository-pronghorn.forge.cloudbees.com</id>
+            <name>Active Repo for PronghornPipes</name>
+            <url>http://repository-pronghorn.forge.cloudbees.com/snapshot/</url>
+            <layout>default</layout>
+        </repository>
+    </repositories>    
 </project>
