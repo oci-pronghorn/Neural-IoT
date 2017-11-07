@@ -34,8 +34,8 @@ public class OAPNnet {
         String [][] testingData =  new String[numTrainingRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
         
-        readInData(trainingData, trainingDataFN);
-        readInData(testingData, testDataFN);
+       trainingData= readInData(trainingData, trainingDataFN);
+       testingData= readInData(testingData, testDataFN);
         
         GraphManager gm = new GraphManager();
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
@@ -43,7 +43,7 @@ public class OAPNnet {
         
     }
     
-    public static void readInData(String[][] data, String fn){
+    public static String[][] readInData(String[][] data, String fn){
         String line = null;
         try {
             int i = 0;
@@ -62,6 +62,7 @@ public class OAPNnet {
         catch(IOException ex) {
             System.out.println("IOException while reading file:" + fn);                
         }
+        return data;
     }
     
     //Incomplete, currently based on Nathan's tutorial
@@ -80,7 +81,7 @@ public class OAPNnet {
                 Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
 		
                 //TODO: refer to instance of our stage here
-		inputStage.newInstance(gm, data, prevA);
+		outputStage.newInstance(gm, data, prevA);
 			
 		int nodesInLayerA = inputsCount;
 		Pipe<MessageSchemaDynamic>[][] fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
