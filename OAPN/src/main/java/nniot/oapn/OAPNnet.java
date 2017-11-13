@@ -81,7 +81,7 @@ public class OAPNnet {
                 Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
 		
                 //TODO: refer to instance of our stage here
-		outputStage.newInstance(gm, data, prevA);
+		outputStage.newInstance(gm, data, prevA, "");
 			
 		int nodesInLayerA = inputsCount;
 		Pipe<MessageSchemaDynamic>[][] fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);

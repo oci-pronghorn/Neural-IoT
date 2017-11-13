@@ -25,7 +25,7 @@ public class outputStage extends PronghornStage {
     public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) {
         super(gm, NONE, output);
         this.output = output;
-        this.outputPath=new File
+        this.outputPath= new File("");
     }
 
     public void run(){
