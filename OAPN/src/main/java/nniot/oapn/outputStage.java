@@ -18,17 +18,15 @@ public class outputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] output;
     private final File outputPath;
-    private HashMap weightsMap;
     
-    public static outputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname, HashMap weightsMap) {
-        return new outputStage(gm, data, output, fname, weightsMap);
+    public static outputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) {
+        return new outputStage(gm, data, output, fname);
     }
 
-    public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname, HashMap weightsMap) {
+    public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) {
         super(gm, NONE, output);
         this.output = output;
         this.outputPath= new File("");
-        this.weightsMap = weightsMap;
     }
 
     public void run(){

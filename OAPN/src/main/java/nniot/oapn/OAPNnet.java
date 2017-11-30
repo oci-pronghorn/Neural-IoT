@@ -31,7 +31,8 @@ public class OAPNnet {
     static final String testDataFN = "";
     static final String trainingDataFN = "";
     static Boolean isTraining = false;
-    static HashMap weightsMap;
+    //This map is shared among all stages
+    static HashMap<Pipe<MessageSchemaDynamic>,Float> weightsMap;
     
     private static Appendable target;
 
@@ -95,7 +96,7 @@ public class OAPNnet {
         Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
 
         //TODO: refer to instance of our stage here
-        inputStage.newInstance(gm, data, prevA, weightsMap);
+        inputStage.newInstance(gm, data, prevA);
 
         int nodesInLayerA = inputsCount;
         Pipe<MessageSchemaDynamic>[][] fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
@@ -106,7 +107,7 @@ public class OAPNnet {
         Pipe<MessageSchemaDynamic>[] fromC = NeuralGraphBuilder.lastPipeLayer(gm, fromB, factory);
 
         //TODO: refer to instance of our output stage here
-        outputStage.newInstance(gm, data, fromC, "", weightsMap);
+        outputStage.newInstance(gm, data, fromC, "");
 
     }
 }

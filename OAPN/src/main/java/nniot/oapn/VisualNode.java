@@ -14,38 +14,34 @@ public class VisualNode extends PronghornStage {
 	private final Pipe<MessageSchemaDynamic>[] input; 
 	private final Pipe<MessageSchemaDynamic>[] output;
 	private float[] weights;
-        private HashMap weightsMap;
 	
-	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output, HashMap weightsMap) {
+	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
 		super(gm, input, output);
 		this.input = new Pipe[]{input};
 		this.output = output;
-                this.weightsMap = weightsMap;
 		buildWeights();
 	}
 
-	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output, HashMap weightsMap) {
+	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output) {
 		super(gm, input, output);
 		this.input = input;
 		this.output = output;
-		this.weightsMap = weightsMap;
                 buildWeights();
 	}
 
-	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output, HashMap weightsMap) {
+	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output) {
 		super(gm, input, output);
 		this.input = input;
 		this.output = new Pipe[]{output};
-		this.weightsMap = weightsMap;
                 buildWeights();
 	}
 
 	private void buildWeights() {		
-		//TODO: should ask a singleton dictionary for the weights...
-		
 		this.weights = new float[this.input.length];
-		Arrays.fill(weights, 1);
-		
+                //loop pulls weights from singleton dictionary that uses pipes as keys
+		for(int i = 0; i < input.length; i++){
+                    weights[i] = OAPNnet.weightsMap.get(input[i]);
+                }
 	}
 	
 	@Override

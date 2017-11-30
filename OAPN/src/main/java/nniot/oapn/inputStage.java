@@ -16,16 +16,14 @@ import java.util.HashMap;
 public class inputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] output;
-    private HashMap weightsMap;
     
-    public static inputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, HashMap weightsMap) {
-        return new inputStage(gm, data, output, weightsMap);
+    public static inputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output) {
+        return new inputStage(gm, data, output);
     }
 
-    public inputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, HashMap weightsMap) {
+    public inputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, NONE, output);
         this.output = output;
-        this.weightsMap = weightsMap;
     }
 
     public void run(){
