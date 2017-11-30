@@ -36,7 +36,7 @@ public class OAPNnet {
     
     private static Appendable target;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws FileNotFoundException {
         String[][] trainingData = new String[numTestRecords][numAttributes + 1];
         String[][] testingData = new String[numTrainingRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
@@ -81,7 +81,7 @@ public class OAPNnet {
     }
 
     //Incomplete, currently based on Nathan's tutorial
-    public static void buildVisualNeuralNet(GraphManager gm, String[][] data) {
+    public static void buildVisualNeuralNet(GraphManager gm, String[][] data) throws FileNotFoundException {
         final SchemalessFixedFieldPipeConfig config = new SchemalessFixedFieldPipeConfig(32);
         config.hideLabels();
 
