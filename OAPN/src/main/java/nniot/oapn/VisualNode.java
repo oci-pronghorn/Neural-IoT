@@ -7,6 +7,7 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import java.util.HashMap;
 
 public class VisualNode extends PronghornStage {
 
@@ -25,22 +26,22 @@ public class VisualNode extends PronghornStage {
 		super(gm, input, output);
 		this.input = input;
 		this.output = output;
-		buildWeights();
+                buildWeights();
 	}
 
 	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output) {
 		super(gm, input, output);
 		this.input = input;
 		this.output = new Pipe[]{output};
-		buildWeights();
+                buildWeights();
 	}
 
 	private void buildWeights() {		
-		//TODO: should ask a singleton dictionary for the weights...
-		
 		this.weights = new float[this.input.length];
-		Arrays.fill(weights, 1);
-		
+                //loop pulls weights from singleton dictionary that uses pipes as keys
+		for(int i = 0; i < input.length; i++){
+                    weights[i] = OAPNnet.weightsMap.get(input[i]);
+                }
 	}
 	
 	@Override

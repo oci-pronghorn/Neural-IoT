@@ -12,23 +12,32 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import static com.ociweb.pronghorn.stage.PronghornStage.NONE;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import java.io.File;
+<<<<<<< HEAD
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
+=======
+import java.util.HashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+>>>>>>> 740adbb199ac26b6fa7f4d23811dccd9eb00e212
 
 public class outputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] output;
+
     private  PrintWriter outputFileWriter;
     private File trainingFile;
     private final String[][] data;
     public static outputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
         return new outputStage(gm, data, output,fname);
+
     }
 
     public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
         super(gm, NONE, output);
         this.output = output;
+
         this.outputFileWriter= new PrintWriter(new File(fname));
         trainingFile=new File(fname.concat("OUTPUT"));
         this.data=data;
@@ -36,7 +45,11 @@ public class outputStage extends PronghornStage {
     }
 
     public void run(){
-        writeOutput();
+        try {
+            writeOutput();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(outputStage.class.getName()).log(Level.SEVERE, null, ex);
+        }
         
     }
     
@@ -61,10 +74,10 @@ public class outputStage extends PronghornStage {
         }
         if (OAPNnet.isTraining) {
             outputFileWriter=new PrintWriter(trainingFile);
-            for (String name: OAPNnet.weightsMap.keySet(){
+            for (String name: OAPNnet.weightsMap.keySet()){
 
             String key =name.toString();
-            String value = example.get(name).toString();  
+            String value = OAPNnet.weightsMap.get(name).toString();  
             System.out.println(key + " " + value);  
 
 
