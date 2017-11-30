@@ -12,15 +12,12 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import static com.ociweb.pronghorn.stage.PronghornStage.NONE;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import java.io.File;
-<<<<<<< HEAD
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-=======
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
->>>>>>> 740adbb199ac26b6fa7f4d23811dccd9eb00e212
 
 public class outputStage extends PronghornStage {
 
