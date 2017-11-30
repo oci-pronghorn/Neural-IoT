@@ -7,32 +7,37 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import java.util.HashMap;
 
 public class VisualNode extends PronghornStage {
 
 	private final Pipe<MessageSchemaDynamic>[] input; 
 	private final Pipe<MessageSchemaDynamic>[] output;
 	private float[] weights;
+        private HashMap weightsMap;
 	
-	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
+	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output, HashMap weightsMap) {
 		super(gm, input, output);
 		this.input = new Pipe[]{input};
 		this.output = output;
+                this.weightsMap = weightsMap;
 		buildWeights();
 	}
 
-	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output) {
+	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output, HashMap weightsMap) {
 		super(gm, input, output);
 		this.input = input;
 		this.output = output;
-		buildWeights();
+		this.weightsMap = weightsMap;
+                buildWeights();
 	}
 
-	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output) {
+	public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output, HashMap weightsMap) {
 		super(gm, input, output);
 		this.input = input;
 		this.output = new Pipe[]{output};
-		buildWeights();
+		this.weightsMap = weightsMap;
+                buildWeights();
 	}
 
 	private void buildWeights() {		

@@ -12,20 +12,23 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import static com.ociweb.pronghorn.stage.PronghornStage.NONE;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import java.io.File;
+import java.util.HashMap;
 
 public class outputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] output;
     private final File outputPath;
-
-    public static outputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) {
-        return new outputStage(gm, data, output,fname);
+    private HashMap weightsMap;
+    
+    public static outputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname, HashMap weightsMap) {
+        return new outputStage(gm, data, output, fname, weightsMap);
     }
 
-    public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) {
+    public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname, HashMap weightsMap) {
         super(gm, NONE, output);
         this.output = output;
         this.outputPath= new File("");
+        this.weightsMap = weightsMap;
     }
 
     public void run(){

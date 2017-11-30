@@ -11,18 +11,21 @@ import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import static com.ociweb.pronghorn.stage.PronghornStage.NONE;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import java.util.HashMap;
 
 public class inputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] output;
-
-    public static inputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output) {
-        return new inputStage(gm, data, output);
+    private HashMap weightsMap;
+    
+    public static inputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, HashMap weightsMap) {
+        return new inputStage(gm, data, output, weightsMap);
     }
 
-    public inputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output) {
+    public inputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, HashMap weightsMap) {
         super(gm, NONE, output);
         this.output = output;
+        this.weightsMap = weightsMap;
     }
 
     public void run(){

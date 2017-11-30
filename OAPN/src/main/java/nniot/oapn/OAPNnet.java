@@ -16,6 +16,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
 
 /**
  *
@@ -30,7 +31,8 @@ public class OAPNnet {
     static final String testDataFN = "";
     static final String trainingDataFN = "";
     static Boolean isTraining = false;
-
+    static HashMap weightsMap;
+    
     private static Appendable target;
 
     public static void main(String[] args) {
@@ -93,7 +95,7 @@ public class OAPNnet {
         Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
 
         //TODO: refer to instance of our stage here
-        inputStage.newInstance(gm, data, prevA);
+        inputStage.newInstance(gm, data, prevA, weightsMap);
 
         int nodesInLayerA = inputsCount;
         Pipe<MessageSchemaDynamic>[][] fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
@@ -104,7 +106,7 @@ public class OAPNnet {
         Pipe<MessageSchemaDynamic>[] fromC = NeuralGraphBuilder.lastPipeLayer(gm, fromB, factory);
 
         //TODO: refer to instance of our output stage here
-        outputStage.newInstance(gm, data, fromC, "");
+        outputStage.newInstance(gm, data, fromC, "", weightsMap);
 
     }
 }
