@@ -71,7 +71,7 @@ public class outputStage extends PronghornStage {
         }
         if (OAPNnet.isTraining) {
             outputFileWriter=new PrintWriter(trainingFile);
-            for (String name: OAPNnet.weightsMap.keySet()){
+            for (Pipe<MessageSchemaDynamic> name: OAPNnet.weightsMap.keySet()){
 
             String key =name.toString();
             String value = OAPNnet.weightsMap.get(name).toString();  
