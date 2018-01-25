@@ -10,5 +10,11 @@ package attribute.fileiotest;
  * @author nick
  */
 public class TestClassWithAttribute {
+    int shouldBeSameAccrossRuns;
+
+    public TestClassWithAttribute() {
+    }
+    
     
 }
+

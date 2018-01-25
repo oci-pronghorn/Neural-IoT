@@ -49,7 +49,7 @@ public class AttributeFileIOTest {
                 testClassWithAttribute.shouldBeSameAccrossRuns = (int) attrDict.get(testClassWithAttribute.toString());
             }
             try {
-                BufferedWriter out = new BufferedWriter(new FileWriter(firstRunStr, false));
+                BufferedWriter out = new BufferedWriter(new FileWriter(secRunStr, false));
                 for (TestClassWithAttribute testClassWithAttribute : tArr) {
                     out.write(testClassWithAttribute.toString()+ " "+ testClassWithAttribute.shouldBeSameAccrossRuns+"\n");
 
