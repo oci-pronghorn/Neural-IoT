@@ -29,7 +29,7 @@ public class NeuralIoT {
 		
 		GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
 		
-		boolean useMatrix = true;
+		boolean useMatrix = false;
 		if (useMatrix) {
 			buildMatrixNeuralNet(gm);
 		} else {
@@ -124,5 +124,5 @@ public class NeuralIoT {
 		
 	}
 	
-	
+
 }

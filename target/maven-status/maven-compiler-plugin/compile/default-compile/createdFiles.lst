@@ -1,0 +1,8 @@
+com/ociweb/neuralIoT/DataConsumerStage.class
+com/ociweb/neuralIoT/MatrixDataConsumerStage.class
+com/ociweb/neuralIoT/DataProducerStage.class
+com/ociweb/neuralIoT/MatrixWeightsProducerStage.class
+com/ociweb/neuralIoT/VisualNode.class
+com/ociweb/neuralIoT/NeuralIoT.class
+com/ociweb/neuralIoT/VisualStageFactory.class
+com/ociweb/neuralIoT/MatrixDataProducerStage.class

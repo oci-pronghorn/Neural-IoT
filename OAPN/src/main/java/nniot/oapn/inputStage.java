@@ -27,8 +27,21 @@ public class inputStage extends PronghornStage {
     }
 
     public void run(){
+        int c = 0;
+		
+		while (c>0 || ((c = roomForWrite()) > 0) ){
+			c -= 1;
 
-        
+			int i = output.length;
+			while (--i>=0) {
+				
+				float someValue = 1;
+				
+				SchemalessPipe.writeFloat(output[i], someValue);
+				SchemalessPipe.publishWrites(output[i]);
+				
+			}
+		}
     }
     
     public int roomForWrite() {

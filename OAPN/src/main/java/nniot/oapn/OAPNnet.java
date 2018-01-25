@@ -89,14 +89,16 @@ public class OAPNnet {
 
         int inputsCount;
         if (isTraining) {
-            inputsCount = numAttributes;
-        } else {
             inputsCount = numAttributes + 1;
+        } else {
+            inputsCount = numAttributes;
         }
+        
         Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
 
         //TODO: refer to instance of our stage here
         inputStage.newInstance(gm, data, prevA);
+        
 
         int nodesInLayerA = inputsCount;
         Pipe<MessageSchemaDynamic>[][] fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
