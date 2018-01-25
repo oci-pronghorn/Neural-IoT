@@ -13,3 +13,4 @@ nbactions.xml
 !/.mvn/wrapper/maven-wrapper.jar
 /.classpath
 /.project
+/Attribute FileIOTest/nbproject/private/

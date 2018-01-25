@@ -36,7 +36,7 @@ public class outputStage extends PronghornStage {
         this.output = output;
 
         this.outputFileWriter= new PrintWriter(new File(fname));
-        trainingFile=new File(fname.concat("OUTPUT"));
+        trainingFile=new File(fname.concat("OUTPUT"));// M
         this.data=data;
         
     }
