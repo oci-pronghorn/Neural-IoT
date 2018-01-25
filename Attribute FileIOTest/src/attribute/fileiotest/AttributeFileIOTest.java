@@ -37,6 +37,7 @@ public class AttributeFileIOTest {
         Map attrDict = new HashMap<String, Integer>();//key is hash of TestClassWithAttribute
         File fA = new File(attrStr);
         if (fA.exists()) {
+            System.out.println("subsequent run");
             BufferedReader b = new BufferedReader(new FileReader(fA));
             String line;
             while ((line = b.readLine()) != null) {
@@ -46,7 +47,7 @@ public class AttributeFileIOTest {
 
             }
             for (TestClassWithAttribute testClassWithAttribute : tArr) {
-                testClassWithAttribute.shouldBeSameAccrossRuns = (int) attrDict.get(testClassWithAttribute.toString());
+                testClassWithAttribute.shouldBeSameAccrossRuns = (int) attrDict.get(testClassWithAttribute.toString());// pull from dict loaded to file
             }
             try {
                 BufferedWriter out = new BufferedWriter(new FileWriter(secRunStr, false));
@@ -62,7 +63,8 @@ public class AttributeFileIOTest {
 
         }
         else{
-           
+            System.out.println("first run");
+            
             for (int i = 0; i < tArr.length; i++) {
                 tArr[i].shouldBeSameAccrossRuns=i;
                 
@@ -72,7 +74,7 @@ public class AttributeFileIOTest {
                 BufferedWriter out2 = new BufferedWriter(new FileWriter(attrStr, false));
                 for (TestClassWithAttribute testClassWithAttribute : tArr) {
                     out.write(testClassWithAttribute.toString()+ " "+ testClassWithAttribute.shouldBeSameAccrossRuns+"\n");
-                    out2.write(testClassWithAttribute.toString()+ " "+ testClassWithAttribute.shouldBeSameAccrossRuns+"\n");
+                    out2.write(testClassWithAttribute.toString()+ " "+ testClassWithAttribute.shouldBeSameAccrossRuns+"\n");//write to file for loading
                     
 
                     
