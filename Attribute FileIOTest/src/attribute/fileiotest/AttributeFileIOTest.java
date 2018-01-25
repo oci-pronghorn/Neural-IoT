@@ -36,7 +36,7 @@ public class AttributeFileIOTest {
         }
         Map attrDict = new HashMap<String, Integer>();//key is hash of TestClassWithAttribute
         File fA = new File(attrStr);
-        if (fA.exists() && !fA.isDirectory()) {
+        if (fA.exists()) {
             BufferedReader b = new BufferedReader(new FileReader(fA));
             String line;
             while ((line = b.readLine()) != null) {
@@ -62,19 +62,24 @@ public class AttributeFileIOTest {
 
         }
         else{
+           
             for (int i = 0; i < tArr.length; i++) {
                 tArr[i].shouldBeSameAccrossRuns=i;
                 
             }
              try {
                 BufferedWriter out = new BufferedWriter(new FileWriter(firstRunStr, false));
+                BufferedWriter out2 = new BufferedWriter(new FileWriter(attrStr, false));
                 for (TestClassWithAttribute testClassWithAttribute : tArr) {
                     out.write(testClassWithAttribute.toString()+ " "+ testClassWithAttribute.shouldBeSameAccrossRuns+"\n");
+                    out2.write(testClassWithAttribute.toString()+ " "+ testClassWithAttribute.shouldBeSameAccrossRuns+"\n");
+                    
 
                     
                 }
 
                 out.close();
+                out2.close();
             } catch (IOException e) {
             }
 
