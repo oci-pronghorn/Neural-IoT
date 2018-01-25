@@ -32,8 +32,8 @@ public class OAPNnet {
     static final String trainingDataFN = ""; // this file will already have classifications
     static Boolean isTraining = false;
     //This map is shared among all stages
-    static HashMap<Pipe<MessageSchemaDynamic>,Float> weightsMap;
-    
+    static HashMap<Pipe<MessageSchemaDynamic>, Float> weightsMap;
+
     private static Appendable target;
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -108,31 +108,31 @@ public class OAPNnet {
 
         //TODO: refer to instance of our output stage here
         outputStage.newInstance(gm, data, fromC, "");
-        
+
         //have to build weightsMap here because the pipes become keys in it
-        for(int i = 0; i < prevA.length; i++){
+        for (int i = 0; i < prevA.length; i++) {
             weightsMap.put(prevA[i], new Float(1.0));
         }
-        for(int i = 0; i < fromA.length; i++){
-            for(int j  = 0; j < fromA[i].length; j++)
-            weightsMap.put(fromA[i][j], new Float(1.0));
+        for (int i = 0; i < fromA.length; i++) {
+            for (int j = 0; j < fromA[i].length; j++) {
+                weightsMap.put(fromA[i][j], new Float(1.0));
+            }
         }
-        for(int i = 0; i < fromB.length; i++){
-            for(int j = 0; j < fromB[i].length; j++)
-            weightsMap.put(fromB[i][j], new Float(1.0));
+        for (int i = 0; i < fromB.length; i++) {
+            for (int j = 0; j < fromB[i].length; j++) {
+                weightsMap.put(fromB[i][j], new Float(1.0));
+            }
         }
-        for(int i = 0; i < fromC.length; i++){
+        for (int i = 0; i < fromC.length; i++) {
             weightsMap.put(fromC[i], new Float(1.0));
         }
 
     }
-    
-    public void initializeWeightsMap(){
+
+    public void initializeWeightMap() {
         //if we're in training mode, all weights stay at one
-        if(!isTraining) {
+        if (!isTraining) {
             //TODO: pull weights from file here
         }
     }
 }
-
-    
