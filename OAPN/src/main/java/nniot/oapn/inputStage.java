@@ -14,32 +14,29 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import java.util.HashMap;
 
 public class inputStage extends PronghornStage {
-
+    private Float[][] data;
     private final Pipe<MessageSchemaDynamic>[] output;
     
-    public static inputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output) {
+    public static inputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output) {
         return new inputStage(gm, data, output);
     }
 
-    public inputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output) {
+    public inputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, NONE, output);
         this.output = output;
+        this.data = data;
     }
-
+    
+    //Hands floats out to pipes below it
     public void run(){
-        int c = 0;
-		
+        int c = 0, j = 0;	
 		while (c>0 || ((c = roomForWrite()) > 0) ){
 			c -= 1;
 
 			int i = output.length;
 			while (--i>=0) {
-				
-				float someValue = 1;
-				
-				SchemalessPipe.writeFloat(output[i], someValue);
-				SchemalessPipe.publishWrites(output[i]);
-				
+				SchemalessPipe.writeFloat(output[i], data[i][j]);
+				SchemalessPipe.publishWrites(output[i]);				
 			}
 		}
     }
