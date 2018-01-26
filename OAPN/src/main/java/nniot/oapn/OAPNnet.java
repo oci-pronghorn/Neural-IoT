@@ -33,6 +33,7 @@ public class OAPNnet {
     static Boolean isTraining = false;
     //This map is shared among all stages
     static HashMap<Pipe<MessageSchemaDynamic>, Float> weightsMap;
+    static HashMap<Pipe<MessageSchemaDynamic>, Float> biasesMap;
 
     private static Appendable target;
 
@@ -111,22 +112,27 @@ public class OAPNnet {
         //TODO: refer to instance of our output stage here
         outputStage.newInstance(gm, data, fromC, "");
 
-        //have to build weightsMap here because the pipes become keys in it
+        // Needs better commenting on this part, hard to tell what each part does.
+        //have to build weightsMap and biasesMap here because the pipes become keys in it
         for (int i = 0; i < prevA.length; i++) {
             weightsMap.put(prevA[i], new Float(1.0));
+            biasesMap.put(prevA[i], new Float(1.0));
         }
         for (int i = 0; i < fromA.length; i++) {
             for (int j = 0; j < fromA[i].length; j++) {
                 weightsMap.put(fromA[i][j], new Float(1.0));
+                biasesMap.put(fromA[i][j], new Float(1.0));
             }
         }
         for (int i = 0; i < fromB.length; i++) {
             for (int j = 0; j < fromB[i].length; j++) {
                 weightsMap.put(fromB[i][j], new Float(1.0));
+                biasesMap.put(fromB[i][j], new Float(1.0));
             }
         }
         for (int i = 0; i < fromC.length; i++) {
             weightsMap.put(fromC[i], new Float(1.0));
+            biasesMap.put(fromC[i], new Float(1.0));
         }
 
     }
