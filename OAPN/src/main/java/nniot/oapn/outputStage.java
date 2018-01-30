@@ -35,7 +35,8 @@ public class outputStage extends PronghornStage {
     public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
         super(gm, NONE, output);
         this.output = output;
-
+         
+        
         this.outputFileWriter = new PrintWriter(new File(fname));
         trainingFile = new File(fname.concat("OUTPUT"));
         this.data = data;
