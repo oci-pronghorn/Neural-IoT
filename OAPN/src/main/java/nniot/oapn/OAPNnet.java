@@ -30,12 +30,14 @@ public class OAPNnet {
     static final int numTrainingRecords = 50;
     static final String testDataFN = ""; //this file will not have classifications
     static final String weightsFN = ""; //this file will have weights obtained via training 
+    static final String biasesFN = ""; //this file will have biases obtained via training 
     
     
     static final String trainingDataFN = ""; // this file will already have classifications
     static Boolean isTraining = false;
     //This map is shared among all stages
     static HashMap<Pipe<MessageSchemaDynamic>, Float> weightsMap;
+    static HashMap<Pipe<MessageSchemaDynamic>, Float> biasesMap;
 
     private static Appendable target;
     static Pipe<MessageSchemaDynamic>[][] fromA;
@@ -51,7 +53,7 @@ public class OAPNnet {
         //String []   trainingAnswers = new String[numTrainingRecords];
 
         trainingData = readInData(trainingData, trainingDataFN);
-        testingData = readInData(testingData, testDataFN);
+        testingData = readInData(testingData, testDataFN);//todo why load both each time
 
         target = null;
 
@@ -107,7 +109,7 @@ public class OAPNnet {
 
         //TODO: refer to instance of our stage here
         //TODO DO WE NEED TO ADD buildPipes for each
-        //TODO Where should bias go
+        //TODO Where should biases go
         inputStage.newInstance(gm, data, prevA);
 
         int nodesInLayerA = inputsCount;
@@ -128,50 +130,66 @@ public class OAPNnet {
         if (isTraining) {
             //TODO how to assing weight to pipe after pulling from hashMap
             //TODO: pull weights from file here
-            //TODO: add command line arguments fro weights file
+            //TODO: add command line arguments fro weights  and weights files
             //TODO is overall repo structure ok? (.giingore, pom etc)
-            BufferedReader b = new BufferedReader(new FileReader(weightsFN));
+            BufferedReader weightBR = new BufferedReader(new FileReader(weightsFN));
+            BufferedReader biasBR = new BufferedReader(new FileReader(biasesFN));
             String line;
-            while ((line = b.readLine()) != null) {
+            while ((line = weightBR.readLine()) != null) {
                 String k = line.split(" ")[0];
                 Integer v = new Integer(line.split(" ")[1].replace("\n", ""));
                 weightsMap.put(k, v);
 
             }
-            b.close();
+            weightBR.close();
+            while ((line = biasBR.readLine()) != null) {
+                String k = line.split(" ")[0];
+                Integer v = new Integer(line.split(" ")[1].replace("\n", ""));
+                biasesMap.put(k, v);
+
+            }
+            biasBR.close();
             for (int i = 0; i < prevA.length; i++) {
                 prevA[i].weightsMap.get(prevA[i]);
+                prevA[i].biasesMap.get(prevA[i]);
             }
             for (int i = 0; i < fromA.length; i++) {
                 for (int j = 0; j < fromA[i].length; j++) {
                     weightsMap.get(fromA[i][j]);
+                    biasesMap.get(fromA[i][j]);
                 }
             }
             for (int i = 0; i < fromB.length; i++) {
                 for (int j = 0; j < fromB[i].length; j++) {
                     weightsMap.get(fromB[i][j]);
+                    biasesMap.get(fromB[i][j]);
                 }
             }
             for (int i = 0; i < fromC.length; i++) {
                 weightsMap.get(fromC[i]);
+                biasesMap.get(fromC[i]);
             }
         } else {
-            //discuss best init strategy
+            //discuss best init strategy for biases and weight
             for (int i = 0; i < prevA.length; i++) {
                 weightsMap.put(prevA[i], new Float(1.0));
+                biasesMap.put(prevA[i], new Float(1.0));
             }
             for (int i = 0; i < fromA.length; i++) {
                 for (int j = 0; j < fromA[i].length; j++) {
                     weightsMap.put(fromA[i][j], new Float(1.0));
+                    biasesMap.put(fromA[i][j], new Float(1.0));
                 }
             }
             for (int i = 0; i < fromB.length; i++) {
                 for (int j = 0; j < fromB[i].length; j++) {
                     weightsMap.put(fromB[i][j], new Float(1.0));
+                    biasesMap.put(fromB[i][j], new Float(1.0));
                 }
             }
             for (int i = 0; i < fromC.length; i++) {
                 weightsMap.put(fromC[i], new Float(1.0));
+                biasesMap.put(fromC[i], new Float(1.0));
             }
         }
     }

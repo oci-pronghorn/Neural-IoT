@@ -28,6 +28,8 @@ public class outputStage extends PronghornStage {
 
     private BufferedWriter outputFileWriter;
     private File weightsFile;
+    private File biasesFile;
+    
     private final String[][] data;
 
     public static outputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
@@ -41,6 +43,7 @@ public class outputStage extends PronghornStage {
 
         this.outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")),false));
         weightsFile = new File(fname.concat("OUTPUT-weights"));
+        biasesFile = new File(fname.concat("OUTPUT-biases"));
         this.data = data;
 
     }
@@ -79,6 +82,14 @@ public class outputStage extends PronghornStage {
              for (Pipe<MessageSchemaDynamic> name : OAPNnet.weightsMap.keySet()) {
                  
                 out.write(name.toString()+ " "+ OAPNnet.weightsMap.get(name)+"\n");
+
+            }
+
+            out.close();
+              out = new BufferedWriter(new FileWriter(biasesFile, false));
+             for (Pipe<MessageSchemaDynamic> name : OAPNnet.biasesMap.keySet()) {
+                 
+                out.write(name.toString()+ " "+ OAPNnet.biasesMap.get(name)+"\n");
 
             }
 

@@ -17,12 +17,14 @@ public class VisualNode extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] input;
     private final Pipe<MessageSchemaDynamic>[] output;
+    private float[] biases;
     private float[] weights;
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
         this.input = new Pipe[]{input};
         this.output = output;
+        buildBiases();
         buildWeights();
     }
 
@@ -30,6 +32,7 @@ public class VisualNode extends PronghornStage {
         super(gm, input, output);
         this.input = input;
         this.output = output;
+        buildBiases();
         buildWeights();
     }
 
@@ -37,6 +40,7 @@ public class VisualNode extends PronghornStage {
         super(gm, input, output);
         this.input = input;
         this.output = new Pipe[]{output};
+        buildBiases();
         buildWeights();
     }
 
@@ -47,6 +51,15 @@ public class VisualNode extends PronghornStage {
             weights[i] = OAPNnet.weightsMap.get(input[i]);
         }
     }
+    
+    private void buildBiases() {
+        this.biases = new float[this.input.length];
+        //loop pulls weights from singleton dictionary that uses pipes as keys
+        for (int i = 0; i < input.length; i++) {
+            biases[i] = OAPNnet.biasesMap.get(input[i]);
+        }
+    }
+
 
     /**
      * Calculates the sum of the products of each incoming activation value and
@@ -62,7 +75,7 @@ public class VisualNode extends PronghornStage {
             while (--i >= 0) {
                 float value = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
-                sum += (value * weights[i]);
+                sum += (value * weights[i]) + biases[i];
             }
 
             //send this value to all the down stream nodes
