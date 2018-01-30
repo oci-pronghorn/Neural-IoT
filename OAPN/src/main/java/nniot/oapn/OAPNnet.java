@@ -29,7 +29,8 @@ public class OAPNnet {
     static final int numTestRecords = 100;
     static final int numTrainingRecords = 50;
     static final String testDataFN = ""; //this file will not have classifications
-    static final String weightsFN = ""; //this file will not have classifications
+    static final String weightsFN = ""; //this file will have weights obtained via training 
+    
     
     static final String trainingDataFN = ""; // this file will already have classifications
     static Boolean isTraining = false;
@@ -105,6 +106,8 @@ public class OAPNnet {
         prevA = Pipe.buildPipes(inputsCount, config);
 
         //TODO: refer to instance of our stage here
+        //TODO DO WE NEED TO ADD buildPipes for each
+        //TODO Where should bias go
         inputStage.newInstance(gm, data, prevA);
 
         int nodesInLayerA = inputsCount;
