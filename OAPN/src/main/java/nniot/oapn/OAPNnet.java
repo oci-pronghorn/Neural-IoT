@@ -131,10 +131,11 @@ public class OAPNnet {
             String line;
             while ((line = b.readLine()) != null) {
                 String k = line.split(" ")[0];
-                Integer v = new Integer(line.split(" ")[1]);
+                Integer v = new Integer(line.split(" ")[1].replace("\n", ""));
                 weightsMap.put(k, v);
 
             }
+            b.close();
             for (int i = 0; i < prevA.length; i++) {
                 prevA[i].weightsMap.get(prevA[i]);
             }

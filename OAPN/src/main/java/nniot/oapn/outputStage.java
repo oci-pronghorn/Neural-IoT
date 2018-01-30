@@ -11,9 +11,12 @@ import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import static com.ociweb.pronghorn.stage.PronghornStage.NONE;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -23,8 +26,8 @@ public class outputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] output;
 
-    private PrintWriter outputFileWriter;
-    private File trainingFile;
+    private BufferedWriter outputFileWriter;
+    private File weightsFile;
     private final String[][] data;
 
     public static outputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
@@ -32,18 +35,17 @@ public class outputStage extends PronghornStage {
 
     }
 
-    public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
+    public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException, IOException {
         super(gm, NONE, output);
         this.output = output;
-         
-        
-        this.outputFileWriter = new PrintWriter(new File(fname));
-        trainingFile = new File(fname.concat("OUTPUT"));
+
+        this.outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")),false));
+        weightsFile = new File(fname.concat("OUTPUT-weights"));
         this.data = data;
 
     }
 
-    public void run() {
+    public void run() throws IOException {
         try {
             writeOutput();
         } catch (FileNotFoundException ex) {
@@ -60,7 +62,7 @@ public class outputStage extends PronghornStage {
 		}
 		return result;
     }*/
-    public void writeOutput() throws FileNotFoundException {
+    public void writeOutput() throws FileNotFoundException, IOException {
         for (String[] row : data) {
             String s = "";
             for (String item : row) {
@@ -71,18 +73,23 @@ public class outputStage extends PronghornStage {
             s += "\n";
             outputFileWriter.write(s);
         }
+        outputFileWriter.close();
         if (OAPNnet.isTraining) {
-            outputFileWriter = new PrintWriter(trainingFile);
-            for (Pipe<MessageSchemaDynamic> name : OAPNnet.weightsMap.keySet()) {
-                String key = name.toString();
-                String value = OAPNnet.weightsMap.get(name).toString();
-                System.out.println(key + " " + value);
+            BufferedWriter out = new BufferedWriter(new FileWriter(weightsFile, false));
+             for (Pipe<MessageSchemaDynamic> name : OAPNnet.weightsMap.keySet()) {
+                 
+                out.write(name.toString()+ " "+ OAPNnet.weightsMap.get(name)+"\n");
+
             }
+
+            out.close();
+                     
         }
     }
 
     private String getCorrelatedOutput(String s[]) {
         // ask dr mayer and mr tippy
+        //TODO WHICH INPUT ROW GOES WITH WHICH OUTOUT, HASH EACH INPUT LINBE AND USE SINGLETON HASHMAP
         return null;
     }
 }
