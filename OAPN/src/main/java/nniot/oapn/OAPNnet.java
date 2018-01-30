@@ -170,7 +170,7 @@ public class OAPNnet {
                 biasesMap.get(fromC[i]);
             }
         } else {
-            //discuss best init strategy for biases and weight
+            //TODO discuss best init strategy for biases and weight
             for (int i = 0; i < prevA.length; i++) {
                 weightsMap.put(prevA[i], new Float(1.0));
                 biasesMap.put(prevA[i], new Float(1.0));
