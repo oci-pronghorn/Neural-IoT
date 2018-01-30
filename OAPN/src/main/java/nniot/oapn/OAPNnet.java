@@ -28,13 +28,21 @@ public class OAPNnet {
     static final int numAttributes = 10;
     static final int numTestRecords = 100;
     static final int numTrainingRecords = 50;
-    static final String testDataFN = ""; //this file will already have weights
+    static final String testDataFN = ""; //this file will not have classifications
+    static final String weightsFN = ""; //this file will not have classifications
+    
     static final String trainingDataFN = ""; // this file will already have classifications
     static Boolean isTraining = false;
     //This map is shared among all stages
     static HashMap<Pipe<MessageSchemaDynamic>, Float> weightsMap;
 
     private static Appendable target;
+    static Pipe<MessageSchemaDynamic>[][] fromA;
+
+    static Pipe<MessageSchemaDynamic>[][] fromB;
+
+    static Pipe<MessageSchemaDynamic>[] fromC;
+    static Pipe<MessageSchemaDynamic>[] prevA;
 
     public static void main(String[] args) throws FileNotFoundException {
         String[][] trainingData = new String[numTestRecords][numAttributes + 1];
@@ -93,48 +101,74 @@ public class OAPNnet {
         } else {
             inputsCount = numAttributes;
         }
-        
-        Pipe<MessageSchemaDynamic>[] prevA = Pipe.buildPipes(inputsCount, config);
+
+        prevA = Pipe.buildPipes(inputsCount, config);
 
         //TODO: refer to instance of our stage here
         inputStage.newInstance(gm, data, prevA);
-        
 
         int nodesInLayerA = inputsCount;
-        Pipe<MessageSchemaDynamic>[][] fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
-
         int nodesInLayerB = inputsCount;
-        Pipe<MessageSchemaDynamic>[][] fromB = NeuralGraphBuilder.buildPipeLayer(gm, config, fromA, nodesInLayerB, factory);
+        fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
 
-        Pipe<MessageSchemaDynamic>[] fromC = NeuralGraphBuilder.lastPipeLayer(gm, fromB, factory);
+        fromB = NeuralGraphBuilder.buildPipeLayer(gm, config, fromA, nodesInLayerB, factory);
+
+        fromC = NeuralGraphBuilder.lastPipeLayer(gm, fromB, factory);
 
         //TODO: refer to instance of our output stage here
         outputStage.newInstance(gm, data, fromC, "");
 
-        //have to build weightsMap here because the pipes become keys in it
-        for (int i = 0; i < prevA.length; i++) {
-            weightsMap.put(prevA[i], new Float(1.0));
-        }
-        for (int i = 0; i < fromA.length; i++) {
-            for (int j = 0; j < fromA[i].length; j++) {
-                weightsMap.put(fromA[i][j], new Float(1.0));
-            }
-        }
-        for (int i = 0; i < fromB.length; i++) {
-            for (int j = 0; j < fromB[i].length; j++) {
-                weightsMap.put(fromB[i][j], new Float(1.0));
-            }
-        }
-        for (int i = 0; i < fromC.length; i++) {
-            weightsMap.put(fromC[i], new Float(1.0));
-        }
-
     }
 
-    public void initializeWeightMap() {
+    public void initializeWeightMap() throws FileNotFoundException, IOException {
         //if we're in training mode, all weights stay at one
-        if (!isTraining) {
+        if (isTraining) {
+            //TODO how to assing weight to pipe after pulling from hashMap
             //TODO: pull weights from file here
+            //TODO: add command line arguments fro weights file
+            //TODO is overall repo structure ok? (.giingore, pom etc)
+            BufferedReader b = new BufferedReader(new FileReader(weightsFN));
+            String line;
+            while ((line = b.readLine()) != null) {
+                String k = line.split(" ")[0];
+                Integer v = new Integer(line.split(" ")[1]);
+                weightsMap.put(k, v);
+
+            }
+            for (int i = 0; i < prevA.length; i++) {
+                prevA[i].weightsMap.get(prevA[i]);
+            }
+            for (int i = 0; i < fromA.length; i++) {
+                for (int j = 0; j < fromA[i].length; j++) {
+                    weightsMap.get(fromA[i][j]);
+                }
+            }
+            for (int i = 0; i < fromB.length; i++) {
+                for (int j = 0; j < fromB[i].length; j++) {
+                    weightsMap.get(fromB[i][j]);
+                }
+            }
+            for (int i = 0; i < fromC.length; i++) {
+                weightsMap.get(fromC[i]);
+            }
+        } else {
+            //discuss best init strategy
+            for (int i = 0; i < prevA.length; i++) {
+                weightsMap.put(prevA[i], new Float(1.0));
+            }
+            for (int i = 0; i < fromA.length; i++) {
+                for (int j = 0; j < fromA[i].length; j++) {
+                    weightsMap.put(fromA[i][j], new Float(1.0));
+                }
+            }
+            for (int i = 0; i < fromB.length; i++) {
+                for (int j = 0; j < fromB[i].length; j++) {
+                    weightsMap.put(fromB[i][j], new Float(1.0));
+                }
+            }
+            for (int i = 0; i < fromC.length; i++) {
+                weightsMap.put(fromC[i], new Float(1.0));
+            }
         }
     }
 }
