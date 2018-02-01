@@ -62,7 +62,6 @@ public class OAPNnet {
 
         GraphManager gm = new GraphManager();
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
-
         if (isTraining) {
             buildVisualNeuralNet(gm, trainingData);
         } else {
