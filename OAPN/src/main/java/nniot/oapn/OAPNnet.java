@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package nniot.oapn;
 
 import com.ociweb.pronghorn.neural.NeuralGraphBuilder;
@@ -148,7 +143,7 @@ public class OAPNnet {
     public void initializeWeightMap() throws FileNotFoundException, IOException {
         //if we're in training mode, all weights stay at one
         if (isTraining) {
-            //TODO how to assing weight to pipe after pulling from hashMap
+            //TODO how to assign weight to pipe after pulling from hashMap
             //TODO: pull weights from file here
             //TODO: add command line arguments fro weights  and weights files
             //TODO is overall repo structure ok? (.giingore, pom etc)
@@ -193,23 +188,23 @@ public class OAPNnet {
             //TODO discuss best init strategy for biases and weight
             for (int i = 0; i < prevA.length; i++) {
                 weightsMap.put(prevA[i].toString(), new Float(1.0));
-                biasesMap.put(prevA[i].toString(), new Float(1.0));
+                biasesMap.put(prevA[i].toString(), new Float(0.0));
             }
             for (int i = 0; i < fromA.length; i++) {
                 for (int j = 0; j < fromA[i].length; j++) {
                     weightsMap.put(fromA[i][j].toString(), new Float(1.0));
-                    biasesMap.put(fromA[i][j].toString(), new Float(1.0));
+                    biasesMap.put(fromA[i][j].toString(), new Float(0.0));
                 }
             }
             for (int i = 0; i < fromB.length; i++) {
                 for (int j = 0; j < fromB[i].length; j++) {
                     weightsMap.put(fromB[i][j].toString(), new Float(1.0));
-                    biasesMap.put(fromB[i][j].toString(), new Float(1.0));
+                    biasesMap.put(fromB[i][j].toString(), new Float(0.0));
                 }
             }
             for (int i = 0; i < fromC.length; i++) {
                 weightsMap.put(fromC[i].toString(), new Float(1.0));
-                biasesMap.put(fromC[i].toString(), new Float(1.0));
+                biasesMap.put(fromC[i].toString(), new Float(0.0));
             }
         }
     }
