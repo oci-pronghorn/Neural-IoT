@@ -70,15 +70,20 @@ public class OAPNnet {
     }
     
     public static void interpretCommandLineOptions(String[] args) {
-        for (String arg : args) {
-            switch (arg) {
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
                 case "help":
                     // Print help statement
+                    System.out.println("usage: OAPNnet.java [-nodes <int>] [-layers <int>]");
                     break;
                 case "-nodes":
-                    
+                    numNodes = Integer.getInteger(args[i+1]);
                     break;
-                default: System.out.println("See 'OAPNnet help' for command line options.");
+                case "-layers":
+                    numLayers = Integer.getInteger(args[i+1]);
+                    break;
+                default:
+                    System.out.println("See 'OAPNnet help' for command line options.");
             }
         }
     }

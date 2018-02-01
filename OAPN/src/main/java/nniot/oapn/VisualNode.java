@@ -48,7 +48,7 @@ public class VisualNode extends PronghornStage {
         this.weights = new float[this.input.length];
         //loop pulls weights from singleton dictionary that uses pipes as keys
         for (int i = 0; i < input.length; i++) {
-            weights[i] = OAPNnet.weightsMap.get(input[i]);
+            weights[i] = OAPNnet.weightsMap.get(input[i].toString());
         }
     }
     
@@ -56,10 +56,9 @@ public class VisualNode extends PronghornStage {
         this.biases = new float[this.input.length];
         //loop pulls weights from singleton dictionary that uses pipes as keys
         for (int i = 0; i < input.length; i++) {
-            biases[i] = OAPNnet.biasesMap.get(input[i]);
+            biases[i] = OAPNnet.biasesMap.get(this.toString());
         }
     }
-
 
     /**
      * Calculates the sum of the products of each incoming activation value and
@@ -93,7 +92,7 @@ public class VisualNode extends PronghornStage {
      */
     public float ReLu(float sum) {
         // Secondary option for rectifier function
-        // return (float) Math.log(1 + Math.exp(sum)
+        // return (float) Math.log(1 + Math.exp(sum))
         return Math.max(0, sum);
     }
 
