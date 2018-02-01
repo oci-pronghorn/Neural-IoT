@@ -41,16 +41,19 @@ public class OAPNnet {
 
     private static Appendable target;
     static Pipe<MessageSchemaDynamic>[][] fromA;
-
     static Pipe<MessageSchemaDynamic>[][] fromB;
-
     static Pipe<MessageSchemaDynamic>[] fromC;
     static Pipe<MessageSchemaDynamic>[] prevA;
+    
+    static int numLayers;
+    static int numNodes;
 
     public static void main(String[] args) throws FileNotFoundException {
         String[][] trainingData = new String[numTestRecords][numAttributes + 1];
         String[][] testingData = new String[numTrainingRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
+        
+        interpretCommandLineOptions(args);
 
         trainingData = readInData(trainingData, trainingDataFN);
         testingData = readInData(testingData, testDataFN);//todo why load both each time
@@ -69,6 +72,20 @@ public class OAPNnet {
         gm.enableTelemetry(8089);
 
         StageScheduler.defaultScheduler(gm).startup();
+    }
+    
+    public static void interpretCommandLineOptions(String[] args) {
+        for (String arg : args) {
+            switch (arg) {
+                case "help":
+                    // Print help statement
+                    break;
+                case "-nodes":
+                    
+                    break;
+                default: System.out.println("See 'OAPNnet help' for command line options.");
+            }
+        }
     }
 
     public static String[][] readInData(String[][] data, String fn) {
@@ -150,8 +167,8 @@ public class OAPNnet {
             }
             biasBR.close();
             for (int i = 0; i < prevA.length; i++) {
-                prevA[i].weightsMap.get(prevA[i]);
-                prevA[i].biasesMap.get(prevA[i]);
+                this.weightsMap.get(prevA[i]);
+                this.biasesMap.get(prevA[i]);
             }
             for (int i = 0; i < fromA.length; i++) {
                 for (int j = 0; j < fromA[i].length; j++) {
