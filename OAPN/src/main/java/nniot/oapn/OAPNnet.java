@@ -187,21 +187,21 @@ public class OAPNnet {
             //Insert weights and biases for first layer into map
             for (int i = 0; i < toFirstHiddenLayer.length; i++) {
                 weightsMap.put(toFirstHiddenLayer[i].toString(), new Float(1.0));
-                biasesMap.put(toFirstHiddenLayer[i].toString(), new Float(1.0));
+                biasesMap.put(toFirstHiddenLayer[i].toString(), new Float(0.0));
             }
             //Insert weights and biases for hidden layers into map
             for (int i = 0; i < hiddenLayers.length; i++) {
                 for (int j = 0; j < hiddenLayers[i].length; j++) {
                     for (int k = 0; k < hiddenLayers[i][j].length; k++) {
                         weightsMap.put(hiddenLayers[i][j][k].toString(), new Float(1.0));
-                        biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(1.0));
+                        biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(0.0));
                     }
                 }
             }
             //Insert weights and biases for last hidden layer into map
             for (int i = 0; i < fromLastHiddenLayer.length; i++) {
                 weightsMap.put(fromLastHiddenLayer[i].toString(), new Float(1.0));
-                biasesMap.put(fromLastHiddenLayer[i].toString(), new Float(1.0));
+                biasesMap.put(fromLastHiddenLayer[i].toString(), new Float(0.0));
             }
         }
     }
