@@ -36,8 +36,8 @@ public class OAPNnet {
     static final String trainingDataFN = ""; // this file will already have classifications
     static Boolean isTraining = false;
     //This map is shared among all stages
-    static HashMap<Pipe<MessageSchemaDynamic>, Float> weightsMap;
-    static HashMap<Pipe<MessageSchemaDynamic>, Float> biasesMap;
+    static HashMap<String, Float> weightsMap;
+    static HashMap<String, Float> biasesMap;
 
     private static Appendable target;
     static Pipe<MessageSchemaDynamic>[][] fromA;
@@ -49,8 +49,8 @@ public class OAPNnet {
     static int numNodes;
 
     public static void main(String[] args) throws FileNotFoundException {
-        String[][] trainingData = new String[numTestRecords][numAttributes + 1];
-        String[][] testingData = new String[numTrainingRecords][numAttributes];
+        Float[][] trainingData = new Float[numTestRecords][numAttributes + 1];
+        Float[][] testingData = new Float[numTrainingRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
         
         interpretCommandLineOptions(args);
@@ -88,7 +88,7 @@ public class OAPNnet {
         }
     }
 
-    public static String[][] readInData(String[][] data, String fn) {
+    public static Float[][] readInData(Float[][] data, String fn) {
         String line = null;
         try {
             int i = 0;
@@ -96,7 +96,10 @@ public class OAPNnet {
             BufferedReader bufferedReader = new BufferedReader(fileReader);
 
             while ((line = bufferedReader.readLine()) != null) {
-                data[i] = line.split(",");
+                String[] temp = line.split(",");
+                for(int j = 0; j < temp.length; j++){
+                data[i][j] = Float.valueOf(temp[j]);                
+                }
                 i++;
             }
             bufferedReader.close();
@@ -109,7 +112,7 @@ public class OAPNnet {
     }
 
     //Incomplete, currently based on Nathan's tutorial
-    public static void buildVisualNeuralNet(GraphManager gm, String[][] data) throws FileNotFoundException {
+    public static void buildVisualNeuralNet(GraphManager gm, Float[][] data) throws FileNotFoundException {
         final SchemalessFixedFieldPipeConfig config = new SchemalessFixedFieldPipeConfig(32);
         config.hideLabels();
 
@@ -154,14 +157,14 @@ public class OAPNnet {
             String line;
             while ((line = weightBR.readLine()) != null) {
                 String k = line.split(" ")[0];
-                Integer v = new Integer(line.split(" ")[1].replace("\n", ""));
+                Float v = new Float(line.split(" ")[1].replace("\n", ""));
                 weightsMap.put(k, v);
 
             }
             weightBR.close();
             while ((line = biasBR.readLine()) != null) {
                 String k = line.split(" ")[0];
-                Integer v = new Integer(line.split(" ")[1].replace("\n", ""));
+                Float v = new Float(line.split(" ")[1].replace("\n", ""));
                 biasesMap.put(k, v);
 
             }
@@ -189,24 +192,24 @@ public class OAPNnet {
         } else {
             //TODO discuss best init strategy for biases and weight
             for (int i = 0; i < prevA.length; i++) {
-                weightsMap.put(prevA[i], new Float(1.0));
-                biasesMap.put(prevA[i], new Float(1.0));
+                weightsMap.put(prevA[i].toString(), new Float(1.0));
+                biasesMap.put(prevA[i].toString(), new Float(1.0));
             }
             for (int i = 0; i < fromA.length; i++) {
                 for (int j = 0; j < fromA[i].length; j++) {
-                    weightsMap.put(fromA[i][j], new Float(1.0));
-                    biasesMap.put(fromA[i][j], new Float(1.0));
+                    weightsMap.put(fromA[i][j].toString(), new Float(1.0));
+                    biasesMap.put(fromA[i][j].toString(), new Float(1.0));
                 }
             }
             for (int i = 0; i < fromB.length; i++) {
                 for (int j = 0; j < fromB[i].length; j++) {
-                    weightsMap.put(fromB[i][j], new Float(1.0));
-                    biasesMap.put(fromB[i][j], new Float(1.0));
+                    weightsMap.put(fromB[i][j].toString(), new Float(1.0));
+                    biasesMap.put(fromB[i][j].toString(), new Float(1.0));
                 }
             }
             for (int i = 0; i < fromC.length; i++) {
-                weightsMap.put(fromC[i], new Float(1.0));
-                biasesMap.put(fromC[i], new Float(1.0));
+                weightsMap.put(fromC[i].toString(), new Float(1.0));
+                biasesMap.put(fromC[i].toString(), new Float(1.0));
             }
         }
     }
