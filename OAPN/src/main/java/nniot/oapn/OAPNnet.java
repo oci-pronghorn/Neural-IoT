@@ -14,20 +14,21 @@ import java.io.IOException;
 import java.util.HashMap;
 
 /**
- *
  * @author nick
  * @author bryson
  */
 public class OAPNnet {
 
-    static final int numAttributes = 10;
-    static final int numTestRecords = 100;
-    static final int numTrainingRecords = 50;
-    static final String testDataFN = ""; //this file will not have classifications
-    static final String weightsFN = ""; //this file will have weights obtained via training 
-    static final String biasesFN = ""; //this file will have biases obtained via training 
+    static int numAttributes = 10;
+    static int numTestRecords = 100;
+    static int numTrainingRecords = 50;
+    static String testDataFN = ""; //this file will not have classifications
+    static String weightsInputFN = ""; //this file will have weights obtained via training
+    static String weightsOutputFN = "";
+    static String biasesInputFN = ""; //this file will have biases obtained via training
+    static String biasesOutputFN = "";
 
-    static final String trainingDataFN = ""; // this file will already have classifications
+    static String trainingDataFN = ""; // this file will already have classifications
     static Boolean isTraining = false;
     //This map is shared among all stages
     static HashMap<String, Float> weightsMap;
@@ -69,25 +70,76 @@ public class OAPNnet {
     public static void interpretCommandLineOptions(String[] args) {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
-                case "help":
-                    // Print help statement
-                    System.out.println("usage: OAPNnet.java [-nodes <int>] [-layers <int>]");
-                    break;
-                case "-nodes":
-
+                case "-n":
                     numHiddenNodes = Integer.getInteger(args[i+1]);
+                    i++;
                     break;
-                case "-layers":
+                case "-l":
                     numHiddenLayers = Integer.getInteger(args[i+1]);
+                    i++;
+                    break;
+                case "-training":
+                    isTraining = true;
+                    break;
+                case "-testing":
+                    isTraining = false;
+                    break;
+                case "-t":
+                    trainingDataFN = args[i+1];
+                    i++;
+                    break;
+                case "-win":
+                    weightsInputFN = args[i+1];
+                    i++;
+                    break;
+                case "-wout":
+                    weightsOutputFN = args[i+1];
+                    i++;
+                    break;
+                case "-bin":
+                    biasesInputFN = args[i+1];
+                    i++;
+                    break;
+                case "-bout":
+                    biasesOutputFN = args[i+1];
+                    i++;
                     break;
                 default:
-                    System.out.println("See 'OAPNnet help' for command line options.");
+                    System.out.println("usage: OAPNnet.java [-n <int>] "
+                            + "[-l <int>] [-training | -testing] "
+                            + "[-t <training_file.txt> | <testing_file.txt>] "
+                            + "[-win <weights_input_file.txt>] "
+                            + "[-wout <weights_output_file.txt>] "
+                            + "[-bin <biases_input_file.txt>] "
+                            + "[-bout <biases_output_file.txt>]\n");
+                    System.out.println("-n\t\tSpecify number of nodes per hidden "
+                            + "layer.");
+                    System.out.println("-l\t\tSpecify number of hidden layers.");
+                    System.out.println("-training\t\tIndicate if net is in "
+                            + "training mode.");
+                    System.out.println("-testing\t\tIndicate if net is in "
+                            + "testing mode.");
+                    System.out.println("-t\t\tSpecify name of file containing "
+                            + "training/testing data.");
+                    System.out.println("-win\t\tSpecify name of file to store "
+                            + "weights after training. Defaults to "
+                            + "./weights_input.txt.");
+                    System.out.println("-wout\t\tSpecify name of file to store "
+                            + "weights after training. Defaults to "
+                            + "./weights_output.txt.");
+                    System.out.println("-bin\t\tSpecify name of file to store "
+                            + "biases after training. Defaults to "
+                            + "./biases_input.txt.");
+                    System.out.println("-bout\t\tSpecify name of file to store "
+                            + "biases after training. Defaults to "
+                            + "./biases_output.txt.");
+                    return;
             }
         }
     }
 
     public static Float[][] readInData(Float[][] data, String fn) {
-        String line = null;
+        String line;
         try {
             int i = 0;
             FileReader fileReader = new FileReader(fn);
@@ -147,8 +199,8 @@ public class OAPNnet {
             //TODO: pull weights from file here
             //TODO: add command line arguments fro weights  and weights files
             //TODO is overall repo structure ok? (.giingore, pom etc)
-            BufferedReader weightBR = new BufferedReader(new FileReader(weightsFN));
-            BufferedReader biasBR = new BufferedReader(new FileReader(biasesFN));
+            BufferedReader weightBR = new BufferedReader(new FileReader(weightsInputFN));
+            BufferedReader biasBR = new BufferedReader(new FileReader(biasesInputFN));
             String line;
             while ((line = weightBR.readLine()) != null) {
                 String k = line.split(" ")[0];
