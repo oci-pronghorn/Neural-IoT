@@ -30,14 +30,20 @@ public class outputStage extends PronghornStage {
     private File weightsFile;
     private File biasesFile;
     
-    private final String[][] data;
+    private final Float[][] data;
 
-    public static outputStage newInstance(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
-        return new outputStage(gm, data, output, fname);
-
+    public static outputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
+        outputStage outputS = null;
+        try {
+            outputS = new outputStage(gm, data, output, fname);
+        }
+        catch (IOException ex) {
+            Logger.getLogger(outputStage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return outputS;
     }
 
-    public outputStage(GraphManager gm, String[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException, IOException {
+    public outputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException, IOException {
         super(gm, NONE, output);
         this.output = output;
 
@@ -48,10 +54,12 @@ public class outputStage extends PronghornStage {
 
     }
 
-    public void run() throws IOException {
+    public void run() {
         try {
             writeOutput();
         } catch (FileNotFoundException ex) {
+            Logger.getLogger(outputStage.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
             Logger.getLogger(outputStage.class.getName()).log(Level.SEVERE, null, ex);
         }
 
@@ -66,10 +74,10 @@ public class outputStage extends PronghornStage {
 		return result;
     }*/
     public void writeOutput() throws FileNotFoundException, IOException {
-        for (String[] row : data) {
+        for (Float[] row : data) {
             String s = "";
-            for (String item : row) {
-                s += item;
+            for (Float item : row) {
+                s += item.toString();
                 s += ", ";
             }
             s += getCorrelatedOutput(row);
@@ -79,7 +87,7 @@ public class outputStage extends PronghornStage {
         outputFileWriter.close();
         if (OAPNnet.isTraining) {
             BufferedWriter out = new BufferedWriter(new FileWriter(weightsFile, false));
-             for (Pipe<MessageSchemaDynamic> name : OAPNnet.weightsMap.keySet()) {
+             for (String name : OAPNnet.weightsMap.keySet()) {
                  
                 out.write(name.toString()+ " "+ OAPNnet.weightsMap.get(name)+"\n");
 
@@ -87,7 +95,7 @@ public class outputStage extends PronghornStage {
 
             out.close();
               out = new BufferedWriter(new FileWriter(biasesFile, false));
-             for (Pipe<MessageSchemaDynamic> name : OAPNnet.biasesMap.keySet()) {
+             for (String name : OAPNnet.biasesMap.keySet()) {
                  
                 out.write(name.toString()+ " "+ OAPNnet.biasesMap.get(name)+"\n");
 
@@ -98,7 +106,7 @@ public class outputStage extends PronghornStage {
         }
     }
 
-    private String getCorrelatedOutput(String s[]) {
+    private String getCorrelatedOutput(Float s[]) {
         // ask dr mayer and mr tippy
         //TODO WHICH INPUT ROW GOES WITH WHICH OUTOUT, HASH EACH INPUT LINBE AND USE SINGLETON HASHMAP
         return null;
