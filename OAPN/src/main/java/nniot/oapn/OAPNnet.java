@@ -26,8 +26,7 @@ public class OAPNnet {
     static final String testDataFN = ""; //this file will not have classifications
     static final String weightsFN = ""; //this file will have weights obtained via training 
     static final String biasesFN = ""; //this file will have biases obtained via training 
-    
-    
+
     static final String trainingDataFN = ""; // this file will already have classifications
     static Boolean isTraining = false;
     //This map is shared among all stages
@@ -35,19 +34,18 @@ public class OAPNnet {
     static HashMap<String, Float> biasesMap;
 
     private static Appendable target;
-    static Pipe<MessageSchemaDynamic>[][] fromA;
-    static Pipe<MessageSchemaDynamic>[][] fromB;
-    static Pipe<MessageSchemaDynamic>[] fromC;
-    static Pipe<MessageSchemaDynamic>[] prevA;
-    
-    static int numLayers;
-    static int numNodes;
+    static Pipe<MessageSchemaDynamic>[] toFirstHiddenLayer;
+    static Pipe<MessageSchemaDynamic>[][][] hiddenLayers;
+    static Pipe<MessageSchemaDynamic>[] fromLastHiddenLayer;
+
+    static int numHiddenLayers;
+    static int numHiddenNodes;
 
     public static void main(String[] args) throws FileNotFoundException {
         Float[][] trainingData = new Float[numTestRecords][numAttributes + 1];
         Float[][] testingData = new Float[numTrainingRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
-        
+
         interpretCommandLineOptions(args);
 
         trainingData = readInData(trainingData, trainingDataFN);
@@ -59,16 +57,16 @@ public class OAPNnet {
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
 
         if (isTraining) {
-            buildVisualNeuralNet(gm, trainingData);
+            buildVisualNeuralNet(gm, trainingData, numHiddenLayers, numHiddenNodes);
         } else {
-            buildVisualNeuralNet(gm, testingData);
+            buildVisualNeuralNet(gm, testingData, numHiddenLayers, numHiddenNodes);
         }
 
         gm.enableTelemetry(8089);
 
         StageScheduler.defaultScheduler(gm).startup();
     }
-    
+
     public static void interpretCommandLineOptions(String[] args) {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -77,10 +75,11 @@ public class OAPNnet {
                     System.out.println("usage: OAPNnet.java [-nodes <int>] [-layers <int>]");
                     break;
                 case "-nodes":
-                    numNodes = Integer.getInteger(args[i+1]);
+
+                    numHiddenNodes = Integer.getInteger(args[i+1]);
                     break;
                 case "-layers":
-                    numLayers = Integer.getInteger(args[i+1]);
+                    numHiddenLayers = Integer.getInteger(args[i+1]);
                     break;
                 default:
                     System.out.println("See 'OAPNnet help' for command line options.");
@@ -97,8 +96,8 @@ public class OAPNnet {
 
             while ((line = bufferedReader.readLine()) != null) {
                 String[] temp = line.split(",");
-                for(int j = 0; j < temp.length; j++){
-                data[i][j] = Float.valueOf(temp[j]);                
+                for (int j = 0; j < temp.length; j++) {
+                    data[i][j] = Float.valueOf(temp[j]);
                 }
                 i++;
             }
@@ -111,8 +110,8 @@ public class OAPNnet {
         return data;
     }
 
-    //Incomplete, currently based on Nathan's tutorial
-    public static void buildVisualNeuralNet(GraphManager gm, Float[][] data) throws FileNotFoundException {
+    //Build OAPN Neural Net sized according to arguments numHiddenLayers and numHiddenNodes
+    public static void buildVisualNeuralNet(GraphManager gm, Float[][] data, int numHiddenLayers, int numHiddenNodes) throws FileNotFoundException {
         final SchemalessFixedFieldPipeConfig config = new SchemalessFixedFieldPipeConfig(32);
         config.hideLabels();
 
@@ -125,23 +124,20 @@ public class OAPNnet {
             inputsCount = numAttributes;
         }
 
-        prevA = Pipe.buildPipes(inputsCount, config);
+        //Create initial pipe layer
+        toFirstHiddenLayer = Pipe.buildPipes(inputsCount, config);
+        inputStage.newInstance(gm, data, toFirstHiddenLayer);
+        hiddenLayers[0] = NeuralGraphBuilder.buildPipeLayer(gm, config, toFirstHiddenLayer, numHiddenNodes, factory);
 
-        //TODO: refer to instance of our stage here
-        //TODO DO WE NEED TO ADD buildPipes for each
-        //TODO Where should biases go
-        inputStage.newInstance(gm, data, prevA);
+        //Create as many hidden layers as are specified by argument
+        for (int i = 1; i < numHiddenLayers; i++) {
+            hiddenLayers[i] = NeuralGraphBuilder.buildPipeLayer(gm, config, hiddenLayers[i - 1], numHiddenNodes, factory);
+        }
+        //Create final pipe layer
+        fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[hiddenLayers.length], factory);
 
-        int nodesInLayerA = inputsCount;
-        int nodesInLayerB = inputsCount;
-        fromA = NeuralGraphBuilder.buildPipeLayer(gm, config, prevA, nodesInLayerA, factory);
-
-        fromB = NeuralGraphBuilder.buildPipeLayer(gm, config, fromA, nodesInLayerB, factory);
-
-        fromC = NeuralGraphBuilder.lastPipeLayer(gm, fromB, factory);
-
-        //TODO: refer to instance of our output stage here
-        outputStage.newInstance(gm, data, fromC, "");
+        //Create instance of output stage
+        outputStage.newInstance(gm, data, fromLastHiddenLayer, "");
 
     }
 
@@ -169,47 +165,44 @@ public class OAPNnet {
 
             }
             biasBR.close();
-            for (int i = 0; i < prevA.length; i++) {
-                this.weightsMap.get(prevA[i]);
-                this.biasesMap.get(prevA[i]);
+            //Pull weights and biases for first layer from map
+            for (int i = 0; i < toFirstHiddenLayer.length; i++) {
+                this.weightsMap.get(toFirstHiddenLayer[i].toString());
+                this.biasesMap.get(toFirstHiddenLayer[i].toString());
             }
-            for (int i = 0; i < fromA.length; i++) {
-                for (int j = 0; j < fromA[i].length; j++) {
-                    weightsMap.get(fromA[i][j]);
-                    biasesMap.get(fromA[i][j]);
+            //Pull weights and biases for hidden layers from map
+            for (int i = 0; i < hiddenLayers.length; i++) {
+                for (int j = 0; j < hiddenLayers[i].length; j++) {
+                    for (int k = 0; k < hiddenLayers[i].length; k++) {
+                        weightsMap.get(hiddenLayers[i][j][k].toString());
+                        biasesMap.get(hiddenLayers[i][j][k].toString());
+                    }
                 }
             }
-            for (int i = 0; i < fromB.length; i++) {
-                for (int j = 0; j < fromB[i].length; j++) {
-                    weightsMap.get(fromB[i][j]);
-                    biasesMap.get(fromB[i][j]);
-                }
-            }
-            for (int i = 0; i < fromC.length; i++) {
-                weightsMap.get(fromC[i]);
-                biasesMap.get(fromC[i]);
+            //Pull weights and biases for last hidden layer from map
+            for (int i = 0; i < fromLastHiddenLayer.length; i++) {
+                weightsMap.get(fromLastHiddenLayer[i].toString());
+                biasesMap.get(fromLastHiddenLayer[i].toString());
             }
         } else {
-            //TODO discuss best init strategy for biases and weight
-            for (int i = 0; i < prevA.length; i++) {
-                weightsMap.put(prevA[i].toString(), new Float(1.0));
-                biasesMap.put(prevA[i].toString(), new Float(0.0));
+            //Insert weights and biases for first layer into map
+            for (int i = 0; i < toFirstHiddenLayer.length; i++) {
+                weightsMap.put(toFirstHiddenLayer[i].toString(), new Float(1.0));
+                biasesMap.put(toFirstHiddenLayer[i].toString(), new Float(1.0));
             }
-            for (int i = 0; i < fromA.length; i++) {
-                for (int j = 0; j < fromA[i].length; j++) {
-                    weightsMap.put(fromA[i][j].toString(), new Float(1.0));
-                    biasesMap.put(fromA[i][j].toString(), new Float(0.0));
+            //Insert weights and biases for hidden layers into map
+            for (int i = 0; i < hiddenLayers.length; i++) {
+                for (int j = 0; j < hiddenLayers[i].length; j++) {
+                    for (int k = 0; k < hiddenLayers[i][j].length; k++) {
+                        weightsMap.put(hiddenLayers[i][j][k].toString(), new Float(1.0));
+                        biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(1.0));
+                    }
                 }
             }
-            for (int i = 0; i < fromB.length; i++) {
-                for (int j = 0; j < fromB[i].length; j++) {
-                    weightsMap.put(fromB[i][j].toString(), new Float(1.0));
-                    biasesMap.put(fromB[i][j].toString(), new Float(0.0));
-                }
-            }
-            for (int i = 0; i < fromC.length; i++) {
-                weightsMap.put(fromC[i].toString(), new Float(1.0));
-                biasesMap.put(fromC[i].toString(), new Float(0.0));
+            //Insert weights and biases for last hidden layer into map
+            for (int i = 0; i < fromLastHiddenLayer.length; i++) {
+                weightsMap.put(fromLastHiddenLayer[i].toString(), new Float(1.0));
+                biasesMap.put(fromLastHiddenLayer[i].toString(), new Float(1.0));
             }
         }
     }
