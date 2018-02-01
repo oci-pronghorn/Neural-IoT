@@ -191,6 +191,24 @@ public class OAPNnet {
         outputStage.newInstance(gm, data, fromLastHiddenLayer, "");
 
     }
+    
+    
+     /**
+     * ***UNDER CONSTRUCTION***
+     * Xavier initialization is used for weight initialization
+     * It helps ensure that the weights aren't too small nor too large
+     */
+    public float XavierInitialization(float numNodes, float weight) {
+        //numNodes * var(w) = 1
+        //var(w) = 1/numNodes
+        int mean = 0;
+        numNodes = numHiddenNodes;
+     
+        //will need to find weights from Gaussian distribuation
+        //with mean=0 and var=1/numNodes (double check?)
+        
+        return weight;
+    }
 
     public void initializeWeightMap() throws FileNotFoundException, IOException {
         //if we're in training mode, all weights stay at one
