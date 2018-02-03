@@ -192,31 +192,40 @@ public class OAPNnet {
 
     }
     
-    
      /**
      * ***UNDER CONSTRUCTION***
      * Xavier initialization is used for weight initialization
      * It helps ensure that the weights aren't too small nor too large
+     * will need to find weights from Gaussian distribution
+     * with mean=0.
+     * read a few resources that said Xavier DOESN'T work well with ReLu...
+     * need to determine what choice is better
      */
-    public float XavierInitialization(float numNodes, float weight) {
-        //numNodes * var(w) = 1
-        //var(w) = 1/numNodes
+    /**
+    public float XavierInitialization(float weight) {
+        //var(w) = 2/numNodes
         int mean = 0;
-        numNodes = numHiddenNodes;
-     
-        //will need to find weights from Gaussian distribuation
-        //with mean=0 and var=1/numNodes (double check?)
+        numHiddenNodes;
         
         return weight;
     }
-
+    */
+    
+    /**
+     * Initialize initial weights randomly for forward propagation; values 
+     * will be greater than or equal to 0.00 and less than or equal to 1.0.
+     */
+    public float initializeWeights() {
+        return (float) Math.random();
+    }
+    
     public void initializeWeightMap() throws FileNotFoundException, IOException {
         //if we're in training mode, all weights stay at one
         if (isTraining) {
             //TODO how to assign weight to pipe after pulling from hashMap
             //TODO: pull weights from file here
             //TODO: add command line arguments fro weights  and weights files
-            //TODO is overall repo structure ok? (.giingore, pom etc)
+            //TODO is overall repo structure ok? (.gitignore, pom etc)
             BufferedReader weightBR = new BufferedReader(new FileReader(weightsInputFN));
             BufferedReader biasBR = new BufferedReader(new FileReader(biasesInputFN));
             String line;
@@ -256,21 +265,21 @@ public class OAPNnet {
         } else {
             //Insert weights and biases for first layer into map
             for (int i = 0; i < toFirstHiddenLayer.length; i++) {
-                weightsMap.put(toFirstHiddenLayer[i].toString(), new Float(1.0));
+                weightsMap.put(toFirstHiddenLayer[i].toString(), initializeWeights());
                 biasesMap.put(toFirstHiddenLayer[i].toString(), new Float(0.0));
             }
             //Insert weights and biases for hidden layers into map
             for (int i = 0; i < hiddenLayers.length; i++) {
                 for (int j = 0; j < hiddenLayers[i].length; j++) {
                     for (int k = 0; k < hiddenLayers[i][j].length; k++) {
-                        weightsMap.put(hiddenLayers[i][j][k].toString(), new Float(1.0));
+                        weightsMap.put(hiddenLayers[i][j][k].toString(), initializeWeights());
                         biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(0.0));
                     }
                 }
             }
             //Insert weights and biases for last hidden layer into map
             for (int i = 0; i < fromLastHiddenLayer.length; i++) {
-                weightsMap.put(fromLastHiddenLayer[i].toString(), new Float(1.0));
+                weightsMap.put(fromLastHiddenLayer[i].toString(), initializeWeights());
                 biasesMap.put(fromLastHiddenLayer[i].toString(), new Float(0.0));
             }
         }
