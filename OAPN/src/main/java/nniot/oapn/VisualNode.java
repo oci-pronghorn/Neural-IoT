@@ -19,6 +19,8 @@ public class VisualNode extends PronghornStage {
     private final Pipe<MessageSchemaDynamic>[] output;
     private float[] biases;
     private float[] weights;
+    public  float   result;
+    public  float   delta;
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
@@ -79,9 +81,9 @@ public class VisualNode extends PronghornStage {
 
             //send this value to all the down stream nodes
             int j = output.length;
-            float result = ReLu(sum);
+            this.result = ReLu(sum);
             while (--j >= 0) {
-                SchemalessPipe.writeFloat(output[j], result);
+                SchemalessPipe.writeFloat(output[j], this.result);
                 SchemalessPipe.publishWrites(output[j]);
             }
         }
