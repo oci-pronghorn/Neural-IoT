@@ -227,6 +227,28 @@ public class OAPNnet {
             //TODO: pull weights from file here
             //TODO: add command line arguments fro weights  and weights files
             //TODO is overall repo structure ok? (.gitignore, pom etc)
+  
+            //Insert weights and biases for first layer into map
+            for (int i = 0; i < toFirstHiddenLayer.length; i++) {
+                weightsMap.put(toFirstHiddenLayer[i].toString(), initializeWeights());
+                biasesMap.put(toFirstHiddenLayer[i].toString(), new Float(0.0));
+            }
+            //Insert weights and biases for hidden layers into map
+            for (int i = 0; i < hiddenLayers.length; i++) {
+                for (int j = 0; j < hiddenLayers[i].length; j++) {
+                    for (int k = 0; k < hiddenLayers[i][j].length; k++) {
+                        weightsMap.put(hiddenLayers[i][j][k].toString(), initializeWeights());
+                        //Insert weights and biases for last hidden layer into map
+                        biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(0.0));
+                    }
+                }
+            }
+            //Insert weights and biases for last hidden layer into map
+            for (int i = 0; i < fromLastHiddenLayer.length; i++) {
+                weightsMap.put(fromLastHiddenLayer[i].toString(), initializeWeights());
+                biasesMap.put(fromLastHiddenLayer[i].toString(), new Float(0.0));
+            }
+        } else {
             BufferedReader weightBR = new BufferedReader(new FileReader(weightsInputFN));
             BufferedReader biasBR = new BufferedReader(new FileReader(biasesInputFN));
             String line;
@@ -243,30 +265,7 @@ public class OAPNnet {
                 biasesMap.put(k, v);
 
             }
-            biasBR.close();
-            
-            
-        } else {
-            //Insert weights and biases for first layer into map
-            for (int i = 0; i < toFirstHiddenLayer.length; i++) {
-                weightsMap.put(toFirstHiddenLayer[i].toString(), initializeWeights());
-                biasesMap.put(toFirstHiddenLayer[i].toString(), new Float(0.0));
-            }
-            //Insert weights and biases for hidden layers into map
-            for (int i = 0; i < hiddenLayers.length; i++) {
-                for (int j = 0; j < hiddenLayers[i].length; j++) {
-                    for (int k = 0; k < hiddenLayers[i][j].length; k++) {
-                        weightsMap.put(hiddenLayers[i][j][k].toString(), initializeWeights());
-                               //Insert weights and biases for last hidden layer into map
-     biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(0.0));
-                    }
-                }
-            }
-            //Insert weights and biases for last hidden layer into map
-            for (int i = 0; i < fromLastHiddenLayer.length; i++) {
-                weightsMap.put(fromLastHiddenLayer[i].toString(), initializeWeights());
-                biasesMap.put(fromLastHiddenLayer[i].toString(), new Float(0.0));
-            }
+            biasBR.close();          
         }
     }
 
