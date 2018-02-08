@@ -244,25 +244,8 @@ public class OAPNnet {
 
             }
             biasBR.close();
-            //Pull weights and biases for first layer from map
-            for (int i = 0; i < toFirstHiddenLayer.length; i++) {
-                this.weightsMap.get(toFirstHiddenLayer[i].toString());
-                this.biasesMap.get(toFirstHiddenLayer[i].toString());
-            }
-            //Pull weights and biases for hidden layers from map
-            for (int i = 0; i < hiddenLayers.length; i++) {
-                for (int j = 0; j < hiddenLayers[i].length; j++) {
-                    for (int k = 0; k < hiddenLayers[i].length; k++) {
-                        weightsMap.get(hiddenLayers[i][j][k].toString());
-                        biasesMap.get(hiddenLayers[i][j][k].toString());
-                    }
-                }
-            }
-            //Pull weights and biases for last hidden layer from map
-            for (int i = 0; i < fromLastHiddenLayer.length; i++) {
-                weightsMap.get(fromLastHiddenLayer[i].toString());
-                biasesMap.get(fromLastHiddenLayer[i].toString());
-            }
+            
+            
         } else {
             //Insert weights and biases for first layer into map
             for (int i = 0; i < toFirstHiddenLayer.length; i++) {
@@ -274,7 +257,8 @@ public class OAPNnet {
                 for (int j = 0; j < hiddenLayers[i].length; j++) {
                     for (int k = 0; k < hiddenLayers[i][j].length; k++) {
                         weightsMap.put(hiddenLayers[i][j][k].toString(), initializeWeights());
-                        biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(0.0));
+                               //Insert weights and biases for last hidden layer into map
+     biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(0.0));
                     }
                 }
             }
