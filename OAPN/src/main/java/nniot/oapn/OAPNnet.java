@@ -8,8 +8,10 @@ import com.ociweb.pronghorn.pipe.SchemalessFixedFieldPipeConfig;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -50,16 +52,15 @@ public class OAPNnet {
 
         interpretCommandLineOptions(args);
 
-        trainingData = readInData(trainingData, trainingDataFN);
-        testingData = readInData(testingData, testDataFN);//todo why load both each time
-
         target = null;
 
         GraphManager gm = new GraphManager();
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
         if (isTraining) {
+            trainingData = readInData(trainingData, trainingDataFN);
             buildVisualNeuralNet(gm, trainingData, numHiddenLayers, numHiddenNodes);
         } else {
+            testingData = readInData(testingData, testDataFN);
             buildVisualNeuralNet(gm, testingData, numHiddenLayers, numHiddenNodes);
         }
 
@@ -267,6 +268,46 @@ public class OAPNnet {
             }
             biasBR.close();          
         }
+    }
+    
+    /**
+     * Function to save current weights and biases of net. Used if net is 
+     * terminated, but will be resumed at a later time.
+     * @param weightsOutputFile
+     * @param biasesOutputFile
+     * @throws IOException
+     */
+    public void saveWeightMap(String weightsOutputFile, String biasesOutputFile)
+            throws IOException {
+        BufferedWriter weightsBW = new BufferedWriter(new FileWriter(
+                weightsOutputFile));
+        BufferedWriter biasesBW = new BufferedWriter(new FileWriter(
+                biasesOutputFile));
+        
+        for (int i = 0; i < toFirstHiddenLayer.length; i++) {
+            String key = toFirstHiddenLayer[i].toString();
+            weightsBW.write(key + " " + weightsMap.get(key) + "\n");
+            biasesBW.write(key + " " + biasesMap.get(key) + "\n");
+        }
+        
+        for (int i = 0; i < hiddenLayers.length; i++) {
+            for (int j = 0; j < hiddenLayers[i].length; j++) {
+                for (int k = 0; k < hiddenLayers[i][j].length; k++) {
+                    String key = hiddenLayers[i][j][k].toString();
+                    weightsBW.write(key + " " + weightsMap.get(key) + "\n");
+                    biasesBW.write(key + " " + biasesMap.get(key) + "\n");
+                }
+            }
+        }
+        
+        for (int i = 0; i < fromLastHiddenLayer.length; i++) {
+            String key = fromLastHiddenLayer[i].toString();
+            weightsBW.write(key + " " + weightsMap.get(key) + "\n");
+            biasesBW.write(key + " " + biasesMap.get(key) + "\n");
+        }
+        
+        weightsBW.close();
+        biasesBW.close();
     }
 
     /**
