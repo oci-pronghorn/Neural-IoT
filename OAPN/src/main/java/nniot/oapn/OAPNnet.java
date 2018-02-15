@@ -16,8 +16,10 @@ import java.io.IOException;
 import java.util.HashMap;
 
 /**
- * @author nick
- * @author bryson
+ * @author Nick Kirkpatrick
+ * @author Bryson Hunsaker
+ * @author Max Spicer
+ * @author Sandy Ly
  */
 public class OAPNnet {
 
@@ -36,6 +38,9 @@ public class OAPNnet {
     static HashMap<String, Float> weightsMap;   // associated with pipes
     static HashMap<String, Float> biasesMap;    // associated with nodes
     static HashMap<String, Float> errorsMap;    // associated with nodes
+    
+    static Float[][] trainingData;
+    static Float[][] testingData;
 
     private static Appendable target;
     static Pipe<MessageSchemaDynamic>[] toFirstHiddenLayer;
@@ -46,8 +51,8 @@ public class OAPNnet {
     static int numHiddenNodes;
 
     public static void main(String[] args) throws FileNotFoundException {
-        Float[][] trainingData = new Float[numTestRecords][numAttributes + 1];
-        Float[][] testingData = new Float[numTrainingRecords][numAttributes];
+        trainingData = new Float[numTestRecords][numAttributes + 1];
+        testingData = new Float[numTrainingRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
 
         interpretCommandLineOptions(args);
@@ -58,6 +63,7 @@ public class OAPNnet {
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
         if (isTraining) {
             trainingData = readInData(trainingData, trainingDataFN);
+            
             buildVisualNeuralNet(gm, trainingData, numHiddenLayers, numHiddenNodes);
         } else {
             testingData = readInData(testingData, testDataFN);
@@ -114,9 +120,10 @@ public class OAPNnet {
                             + "[-wout <weights_output_file.txt>] "
                             + "[-bin <biases_input_file.txt>] "
                             + "[-bout <biases_output_file.txt>]\n");
-                    System.out.println("-n\t\tSpecify number of nodes per hidden "
-                            + "layer.");
-                    System.out.println("-l\t\tSpecify number of hidden layers.");
+                    System.out.println("-n\t\tSpecify number of nodes per "
+                            + "hidden layer.");
+                    System.out.println("-l\t\tSpecify number of hidden "
+                            + "layers.");
                     System.out.println("-training\t\tIndicate if net is in "
                             + "training mode.");
                     System.out.println("-testing\t\tIndicate if net is in "
@@ -156,9 +163,9 @@ public class OAPNnet {
             }
             bufferedReader.close();
         } catch (FileNotFoundException ex) {
-            System.out.println("Unable to open file:" + fn);
+            System.out.println("Unable to open file: " + fn);
         } catch (IOException ex) {
-            System.out.println("IOException while reading file:" + fn);
+            System.out.println("IOException while reading file: " + fn);
         }
         return data;
     }
@@ -216,6 +223,7 @@ public class OAPNnet {
     /**
      * Initialize initial weights randomly for forward propagation; values 
      * will be greater than or equal to 0.00 and less than or equal to 1.0.
+     * @return float
      */
     public float initializeWeights() {
         return (float) Math.random();
@@ -309,6 +317,65 @@ public class OAPNnet {
         weightsBW.close();
         biasesBW.close();
     }
+    
+    /**
+     * Calculates the cost function of the network, used in backpropogation.
+     * @param layerIndex
+     * @param trainingDataIndex
+     * @return 
+     */
+    public float calculateCost(int layerIndex, int trainingDataIndex) {
+        // TODO: Finish cost function
+        // Note: currently written recursively, may be changed to more
+        //  typical iterative style
+        
+        if (layerIndex == 0)
+            // return value of the input node's activation
+            return inputLayer[0].value;
+        
+        // need set of desired output values for each piece of training data
+        // z_j = sum(weight_i * activation_i) + bias
+        //  z is weighted sum of a layer
+        // cost_0 = sum((activation_i - desiredOutput_i)^2)
+        // delCost_0 / delAct = 2(activation - desiredOutput)
+        // delAct / delZ = derivative of sigmoid
+        // delZ / delWeight = Act of last layer
+        
+        float desiredOutput = trainingData[trainingDataIndex][numAttributes + 1];
+        float weightedSum = 0.0f; // z
+        for (int i = 0; i < hiddenLayers.length + 2; i++) {
+            for (int j = 0; j < hiddenLayers[i].length; j++) {
+                for (int k = 0; k < hiddenLayers[i][j].length; k++) {
+                    // weightedSum += weight of each pipe * activation of connected node in current layer
+                    weightedSum += weightsMap.get(hiddenLayers[i][j][k].toString() * 
+                            hiddenLayers[i][j][k].value);
+                }
+            }
+        }
+        
+        // for example network of N layers of one node each
+        
+        // delC / delA = 2(current layer node's result - desiredOutput)
+        float delCdelA = 2 * (currentLayer[0].result - desiredOutput);
+        
+        // delA / delZ = derivative of rectifying function(z), z = weighted sum
+        float delAdelZ = derivativeReLu(weightedSum);
+        
+        // delZ / delW = activation of node of last layer
+        float delZdelW = calculateCost(layerIndex - 1, trainingDataIndex - 1);
+        
+        // delC / delW = product of each other partial derivative
+        float delCdelW = delCdelA * delAdelZ * delZdelW;
+        
+        return delCdelW;
+    }
+    
+    public float derivativeReLu(float sum) {
+        if (sum > 0)
+            return 1.0f;
+        else
+            return 0.0f;
+    }
 
     /**
      * A major step of neural network training is backwards propogation of error
@@ -342,7 +409,8 @@ public class OAPNnet {
     /**
      * Helper function used in backpropogation for calculating error of hidden
      * layers.
-     * @return 
+     * @param value
+     * @return
      */
     public float calculateDerivative(float value) {
         return value * (1.0f - value);
