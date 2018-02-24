@@ -15,8 +15,8 @@ import java.util.HashMap;
  */
 public class VisualNode extends PronghornStage {
 
-    private final Pipe<MessageSchemaDynamic>[] input;
-    private final Pipe<MessageSchemaDynamic>[] output;
+    public final Pipe<MessageSchemaDynamic>[] input;
+    public final Pipe<MessageSchemaDynamic>[] output;
     private float[] biases;
     private float[] weights;
     public  float   result;
@@ -91,11 +91,20 @@ public class VisualNode extends PronghornStage {
 
     /**
      * Used to reduce the weighted sum calculated in run().
+     * @param sum
+     * @return
      */
     public float ReLu(float sum) {
         // Secondary option for rectifier function
         // return (float) Math.log(1 + Math.exp(sum))
         return Math.max(0, sum);
+    }
+    
+    public float derivativeReLu(float sum) {
+        if (sum > 0)
+            return 1.0f;
+        else
+            return 0.0f;
     }
 
     private int availCount() {

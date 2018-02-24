@@ -14,6 +14,7 @@ import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
+import java.math;
 
 /**
  * @author Nick Kirkpatrick
@@ -41,6 +42,8 @@ public class OAPNnet {
     
     static Float[][] trainingData;
     static Float[][] testingData;
+    
+    static Float[][][] epochsSet;
 
     private static Appendable target;
     static Pipe<MessageSchemaDynamic>[] toFirstHiddenLayer;
@@ -168,6 +171,26 @@ public class OAPNnet {
             System.out.println("IOException while reading file: " + fn);
         }
         return data;
+    }
+    
+    public static Float[][][] generateEpochs(Float[][] inputData) {
+        int epochSize = (int) Math.ceil(inputData.length / 10.0f);
+        int numEpochs = (int) Math.ceil(inputData.length / epochSize);
+        epochsSet = new Float[numEpochs][epochSize][numAttributes + 1];
+        int epochIndices[] = new int[numEpochs];
+        
+        for (Float[] row : inputData) {
+            int epochSetIndex = -1;
+            
+            while (epochSetIndex < 0 || epochsSet[epochSetIndex][epochIndices[epochSetIndex]].length > epochSize) {
+                epochSetIndex = (int) Math.floor(Math.random() * numEpochs);
+            }
+            
+            epochsSet[epochSetIndex][epochIndices[epochSetIndex]] = row;
+            epochIndices[epochSetIndex] = epochIndices[epochSetIndex] + 1;
+        }
+        
+        return epochsSet;
     }
 
     //Build OAPN Neural Net sized according to arguments numHiddenLayers and numHiddenNodes
@@ -324,14 +347,14 @@ public class OAPNnet {
      * @param trainingDataIndex
      * @return 
      */
-    public float calculateCost(int layerIndex, int trainingDataIndex) {
+    public float[] calculateCost(int layerIndex, int trainingDataIndex) {
         // TODO: Finish cost function
         // Note: currently written recursively, may be changed to more
         //  typical iterative style
         
         if (layerIndex == 0)
             // return value of the input node's activation
-            return inputLayer[0].value;
+            return ;
         
         // need set of desired output values for each piece of training data
         // z_j = sum(weight_i * activation_i) + bias
@@ -368,13 +391,6 @@ public class OAPNnet {
         float delCdelW = delCdelA * delAdelZ * delZdelW;
         
         return delCdelW;
-    }
-    
-    public float derivativeReLu(float sum) {
-        if (sum > 0)
-            return 1.0f;
-        else
-            return 0.0f;
     }
 
     /**
