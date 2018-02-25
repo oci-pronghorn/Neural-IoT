@@ -14,7 +14,6 @@ import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
-import java.math;
 
 /**
  * @author Nick Kirkpatrick
@@ -177,7 +176,7 @@ public class OAPNnet {
         int epochSize = (int) Math.ceil(inputData.length / 10.0f);
         int numEpochs = (int) Math.ceil(inputData.length / epochSize);
         epochsSet = new Float[numEpochs][epochSize][numAttributes + 1];
-        int epochIndices[] = new int[numEpochs];
+        int[] epochIndices = new int[numEpochs];
         
         for (Float[] row : inputData) {
             int epochSetIndex = -1;
@@ -194,6 +193,7 @@ public class OAPNnet {
     }
 
     //Build OAPN Neural Net sized according to arguments numHiddenLayers and numHiddenNodes
+    //This is essentially forward propagation
     public static void buildVisualNeuralNet(GraphManager gm, Float[][] data, int numHiddenLayers, int numHiddenNodes) throws FileNotFoundException {
         final SchemalessFixedFieldPipeConfig config = new SchemalessFixedFieldPipeConfig(32);
         config.hideLabels();
@@ -253,13 +253,8 @@ public class OAPNnet {
     }
     
     public void initializeWeightMap() throws FileNotFoundException, IOException {
-        //if we're in training mode, all weights stay at one
+        //If we're in training mode, all weights stay at one
         if (isTraining) {
-            //TODO how to assign weight to pipe after pulling from hashMap
-            //TODO: pull weights from file here
-            //TODO: add command line arguments fro weights  and weights files
-            //TODO is overall repo structure ok? (.gitignore, pom etc)
-  
             //Insert weights and biases for first layer into map
             for (int i = 0; i < toFirstHiddenLayer.length; i++) {
                 weightsMap.put(toFirstHiddenLayer[i].toString(), initializeWeights());
@@ -342,7 +337,7 @@ public class OAPNnet {
     }
     
     /**
-     * Calculates the cost function of the network, used in backpropogation.
+     * Calculates the cost function of the network, used in back propagation.
      * @param layerIndex
      * @param trainingDataIndex
      * @return 
@@ -350,7 +345,7 @@ public class OAPNnet {
     public float[] calculateCost(int layerIndex, int trainingDataIndex) {
         // TODO: Finish cost function
         // Note: currently written recursively, may be changed to more
-        //  typical iterative style
+        //       typical iterative style
         
         if (layerIndex == 0)
             // return value of the input node's activation
@@ -394,11 +389,11 @@ public class OAPNnet {
     }
 
     /**
-     * A major step of neural network training is backwards propogation of error
+     * A major step of neural network training is backwards propagation of error
      * and activation values. This function finds the error of each node in each
      * layer and stores that value in the node to be used in updateWeights().
      */
-    public void backwardErrorPropogation() {
+    public void backwardErrorPropagation() {
         /* PSEUDOCODE IMPLEMENTATION */
         // for each node in outputLayer:
             // errorsMap.put(node.toString(), expectedOutput - node.activation);
@@ -413,7 +408,7 @@ public class OAPNnet {
     }
     
     /**
-     * Helper function used in backwardErrorPropogation() to assign the delta of
+     * Helper function used in backwardErrorPropagation() to assign the delta of
      * each node.
      * @param node
      * @return
@@ -423,7 +418,7 @@ public class OAPNnet {
     }
     
     /**
-     * Helper function used in backpropogation for calculating error of hidden
+     * Helper function used in back propagation for calculating error of hidden
      * layers.
      * @param value
      * @return
@@ -447,5 +442,19 @@ public class OAPNnet {
             // for j = 0 -> number of nodes in layer:
                 // pipe = pipe connecting node from last layer to current node
                 // weightsMap.put(pipe, weightsMap.get(pipe) += 0.1 * node.delta * input[j]);
+        
+        for (int i = 0; i < hiddenLayers.length; i++) {
+        /* if node is inputlayer () {
+            static Pipe<MessageSchemaDynamic>[] toFirstHiddenLayer;
+            inputs = original input values;
+            }
+           else {
+            inputs = output of nodes of last layer
+            }
+           for (int j = 0; j < hiddenNodes.length; j++) {
+                pipe = pipe connecting node from last layer to current node
+                weightsMap.put(pipe, weightsMap.get(pipe) += 0.1 * node.delta * input[j]);
+            } */
+          } 
     }
 }

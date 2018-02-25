@@ -1,7 +1,6 @@
 package nniot.oapn;
 
 import java.util.Arrays;
-
 import com.ociweb.pronghorn.pipe.MessageSchemaDynamic;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.SchemalessPipe;
@@ -9,18 +8,14 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import java.util.HashMap;
 
-/**
- *
- * @author max
- */
 public class VisualNode extends PronghornStage {
 
     public final Pipe<MessageSchemaDynamic>[] input;
     public final Pipe<MessageSchemaDynamic>[] output;
     private float[] biases;
     private float[] weights;
-    public  float   result;
-    public  float   delta;
+    public float result;
+    public float delta;
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
@@ -53,7 +48,7 @@ public class VisualNode extends PronghornStage {
             weights[i] = OAPNnet.weightsMap.get(input[i].toString());
         }
     }
-    
+
     private void buildBiases() {
         this.biases = new float[this.input.length];
         //loop pulls weights from singleton dictionary that uses pipes as keys
@@ -99,12 +94,13 @@ public class VisualNode extends PronghornStage {
         // return (float) Math.log(1 + Math.exp(sum))
         return Math.max(0, sum);
     }
-    
+
     public float derivativeReLu(float sum) {
-        if (sum > 0)
+        if (sum > 0) {
             return 1.0f;
-        else
+        } else {
             return 0.0f;
+        }
     }
 
     private int availCount() {

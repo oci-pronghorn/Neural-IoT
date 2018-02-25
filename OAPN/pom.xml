@@ -15,7 +15,7 @@
         <dependency>
             <groupId>com.ociweb</groupId>
             <artifactId>Pronghorn</artifactId>
-            <version>0.0.15-SNAPSHOT</version>
+            <version>0.1.0-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
 
@@ -34,6 +34,12 @@
             <type>jar</type>
             <scope>test</scope>
             <optional>false</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.ociweb</groupId>
+            <artifactId>PronghornPipes</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+            <type>jar</type>
         </dependency>
     </dependencies>
     <repositories>

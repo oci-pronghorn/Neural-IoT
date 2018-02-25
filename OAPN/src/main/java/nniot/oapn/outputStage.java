@@ -24,15 +24,14 @@ public class outputStage extends PronghornStage {
     private BufferedWriter outputFileWriter;
     private File weightsFile;
     private File biasesFile;
-    
+
     private final Float[][] data;
 
     public static outputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
         outputStage outputS = null;
         try {
             outputS = new outputStage(gm, data, output, fname);
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             Logger.getLogger(outputStage.class.getName()).log(Level.SEVERE, null, ex);
         }
         return outputS;
@@ -42,7 +41,7 @@ public class outputStage extends PronghornStage {
         super(gm, NONE, output);
         this.output = output;
 
-        this.outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")),false));
+        this.outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")), false));
         weightsFile = new File(fname.concat("OUTPUT-weights"));
         biasesFile = new File(fname.concat("OUTPUT-biases"));
         this.data = data;
@@ -61,13 +60,13 @@ public class outputStage extends PronghornStage {
     }
 
     /* public int writeOutput() {
-		int result = Integer.MAX_VALUE;
-		int i = output.length;
-		while (--i>=0) {
-			result = Math.min(result, SchemalessPipe.roomRemaining(output[i]));
-		}
-		return result;
-    }*/
+     int result = Integer.MAX_VALUE;
+     int i = output.length;
+     while (--i>=0) {
+     result = Math.min(result, SchemalessPipe.roomRemaining(output[i]));
+     }
+     return result;
+     }*/
     public void writeOutput() throws FileNotFoundException, IOException {
         for (Float[] row : data) {
             String s = "";
@@ -82,28 +81,28 @@ public class outputStage extends PronghornStage {
         outputFileWriter.close();
         if (OAPNnet.isTraining) {
             BufferedWriter out = new BufferedWriter(new FileWriter(weightsFile, false));
-             for (String name : OAPNnet.weightsMap.keySet()) {
-                 
-                out.write(name.toString()+ " "+ OAPNnet.weightsMap.get(name)+"\n");
+            for (String name : OAPNnet.weightsMap.keySet()) {
+
+                out.write(name.toString() + " " + OAPNnet.weightsMap.get(name) + "\n");
 
             }
 
             out.close();
-              out = new BufferedWriter(new FileWriter(biasesFile, false));
-             for (String name : OAPNnet.biasesMap.keySet()) {
-                 
-                out.write(name.toString()+ " "+ OAPNnet.biasesMap.get(name)+"\n");
+            out = new BufferedWriter(new FileWriter(biasesFile, false));
+            for (String name : OAPNnet.biasesMap.keySet()) {
+
+                out.write(name.toString() + " " + OAPNnet.biasesMap.get(name) + "\n");
 
             }
 
             out.close();
-                     
+
         }
     }
 
     private String getCorrelatedOutput(Float s[]) {
         // ask dr mayer and mr tippy
-        //TODO WHICH INPUT ROW GOES WITH WHICH OUTOUT, HASH EACH INPUT LINBE AND USE SINGLETON HASHMAP
+        //TODO: WHICH INPUT ROW GOES WITH WHICH OUTOUT, HASH EACH INPUT LINBE AND USE SINGLETON HASHMAP
         return null;
     }
 }
