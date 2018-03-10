@@ -248,23 +248,25 @@ public class OAPNnet {
      * will be greater than or equal to 0.00 and less than or equal to 1.0.
      * @return float
      */
-    public float initializeWeights() {
+    public float initializeWeight() {
         return (float) Math.random();
     }
     
+    // Logic error? Assigning multiple values (weight and bias) to single key, results in overwriting older data?
+    // Possible fix: add "_W" to weight key name and "_B" to bias key name
     public void initializeWeightMap() throws FileNotFoundException, IOException {
         //If we're in training mode, all weights stay at one
         if (isTraining) {
             //Insert weights and biases for first layer into map
             for (int i = 0; i < toFirstHiddenLayer.length; i++) {
-                weightsMap.put(toFirstHiddenLayer[i].toString(), initializeWeights());
+                weightsMap.put(toFirstHiddenLayer[i].toString(), initializeWeight());
                 biasesMap.put(toFirstHiddenLayer[i].toString(), new Float(0.0));
             }
             //Insert weights and biases for hidden layers into map
             for (int i = 0; i < hiddenLayers.length; i++) {
                 for (int j = 0; j < hiddenLayers[i].length; j++) {
                     for (int k = 0; k < hiddenLayers[i][j].length; k++) {
-                        weightsMap.put(hiddenLayers[i][j][k].toString(), initializeWeights());
+                        weightsMap.put(hiddenLayers[i][j][k].toString(), initializeWeight());
                         //Insert weights and biases for last hidden layer into map
                         biasesMap.put(hiddenLayers[i][j][k].toString(), new Float(0.0));
                     }
@@ -272,7 +274,7 @@ public class OAPNnet {
             }
             //Insert weights and biases for last hidden layer into map
             for (int i = 0; i < fromLastHiddenLayer.length; i++) {
-                weightsMap.put(fromLastHiddenLayer[i].toString(), initializeWeights());
+                weightsMap.put(fromLastHiddenLayer[i].toString(), initializeWeight());
                 biasesMap.put(fromLastHiddenLayer[i].toString(), new Float(0.0));
             }
         } else {
@@ -338,6 +340,8 @@ public class OAPNnet {
     
     /**
      * Calculates the cost function of the network, used in back propagation.
+     * Returns the updated weights and biases to be used in the network for the
+     * next epoch.
      * @param layerIndex
      * @param trainingDataIndex
      * @return 
@@ -348,8 +352,15 @@ public class OAPNnet {
         //       typical iterative style
         
         if (layerIndex == 0)
-            // return value of the input node's activation
-            return ;
+            // return value of the input nodes' activations
+            return epochsSet[0][trainingDataIndex];
+        
+        float currentLayer[];
+        
+        if (layerIndex == numHiddenLayers + 1)
+            currentLayer = fromLastHiddenLayer;
+        else
+            currentLayer = hiddenLayers[layerIndex];
         
         // need set of desired output values for each piece of training data
         // z_j = sum(weight_i * activation_i) + bias
@@ -365,27 +376,34 @@ public class OAPNnet {
             for (int j = 0; j < hiddenLayers[i].length; j++) {
                 for (int k = 0; k < hiddenLayers[i][j].length; k++) {
                     // weightedSum += weight of each pipe * activation of connected node in current layer
-                    weightedSum += weightsMap.get(hiddenLayers[i][j][k].toString() * 
-                            hiddenLayers[i][j][k].value);
+                    weightedSum += weightsMap.get(hiddenLayers[i][j][k].toString()) * hiddenLayers[i][j][k].value;
                 }
             }
         }
         
-        // for example network of N layers of one node each
+        float costGradientBiases[biasesMap.size()];
+        float costGradientWeights[weightsMap.size()];
         
-        // delC / delA = 2(current layer node's result - desiredOutput)
-        float delCdelA = 2 * (currentLayer[0].result - desiredOutput);
-        
-        // delA / delZ = derivative of rectifying function(z), z = weighted sum
-        float delAdelZ = derivativeReLu(weightedSum);
-        
-        // delZ / delW = activation of node of last layer
-        float delZdelW = calculateCost(layerIndex - 1, trainingDataIndex - 1);
-        
-        // delC / delW = product of each other partial derivative
-        float delCdelW = delCdelA * delAdelZ * delZdelW;
-        
-        return delCdelW;
+        for (int i = 0; i < currentLayer.length; i++) {
+            // delC / delA = 2(current layer node's result - desiredOutput)
+            float delCdelA = 2 * (currentLayer[i].result - desiredOutput);
+
+            // delA / delZ = derivative of rectifying function(z), z = weighted sum
+            float delAdelZ = derivativeReLu(weightedSum);
+
+            // delZ / delW = activation of node of last layer
+            float delZdelW = calculateCost(layerIndex - 1, trainingDataIndex - 1);
+            
+            float delZdelB = 1;
+
+            // delC / delW = product of each other partial derivative
+            float delCdelW = delCdelA * delAdelZ * delZdelW;
+            
+            float delCdelB = 
+            costGradient[i] = delCdelW;
+        }
+
+        return costGradient;
     }
 
     /**
@@ -393,7 +411,7 @@ public class OAPNnet {
      * and activation values. This function finds the error of each node in each
      * layer and stores that value in the node to be used in updateWeights().
      */
-    public void backwardErrorPropagation() {
+    public void backpropagation() {
         /* PSEUDOCODE IMPLEMENTATION */
         // for each node in outputLayer:
             // errorsMap.put(node.toString(), expectedOutput - node.activation);
@@ -405,10 +423,12 @@ public class OAPNnet {
                 // NOTE: Will likely have to change input/output arrays in 
                 //       VisualNode to public. Need to talk to group first.
                 // node.delta = calculateDelta(node);
+                
+        
     }
     
     /**
-     * Helper function used in backwardErrorPropagation() to assign the delta of
+     * Helper function used in backpropagation() to assign the delta of
      * each node.
      * @param node
      * @return
@@ -430,8 +450,10 @@ public class OAPNnet {
     /**
      * Function to update the weight of each connection based on the node's last
      * activation and its error.
+     * @param epoch
+     * @param learningRate
      */
-    public void updateWeights() {
+    public void updateWeights(float[] epoch, float learningRate) {
         /* PSEUDOCODE IMPLEMENTATION */
         // float inputs[];
         // for i = 0 -> number of layers in network:
@@ -456,5 +478,14 @@ public class OAPNnet {
                 weightsMap.put(pipe, weightsMap.get(pipe) += 0.1 * node.delta * input[j]);
             } */
           } 
+        
+        float newWeights[weightsMap.size()];
+        float newBiases[biasesMap.size()];
+        float weight_deltas[weightsMap.size()];
+        float bias_deltas[biasesMap.size()];
+        
+        for(int i = 0; i < epoch.length; i++) {
+            
+        }
     }
 }

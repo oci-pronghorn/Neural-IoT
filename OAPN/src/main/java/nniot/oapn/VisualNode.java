@@ -14,7 +14,7 @@ public class VisualNode extends PronghornStage {
     public final Pipe<MessageSchemaDynamic>[] output;
     private float[] biases;
     private float[] weights;
-    public float result;
+    public float result; //activation value
     public float delta;
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
