@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * @author Nick Kirkpatrick
@@ -391,34 +392,63 @@ public class OAPNnet {
      * @return 
      */
     public Object[] backpropagation(float[] output, float desired) {
-        /* PSEUDOCODE IMPLEMENTATION */
-        // for each node in outputLayer:
-            // errorsMap.put(node.toString(), expectedOutput - node.activation);
-            // node.delta = calculateDelta(node);
-        // for each layer in the network (starting with the last hidden layer, ending with input layer):
-            // for each node in currentLayer:
-                // errorsMap.put(node.toString(), (weight of pipe connecting this node and node of last layer) * 
-                //                                (connected node of last layer).delta)
-                // NOTE: Will likely have to change input/output arrays in 
-                //       VisualNode to public. Need to talk to group first.
-                // node.delta = calculateDelta(node);
-                
-                
         // Find a way to grab all activations from neural network at any given point, store in HashMap
-        HashMap<String, Float[]> activations = new HashMap();
+        HashMap<String, Float> activations = new HashMap();
         HashMap<String, Float> newWeights = new HashMap();
         HashMap<String, Float> newBiases = new HashMap();
         
+        Iterator itA = activations.entrySet().iterator();
         Iterator itW = weightsMap.entrySet().iterator();
         Iterator itB = biasesMap.entrySet().iterator();
         
+        float z, a = 0, w, b, dr; // Z is a number that holds the weighted activation, e.g. z = (a * w) + b
+        ArrayList<Float> zArray = new ArrayList(); // Holds all Z values
         
+        while (itW.hasNext() && itA.hasNext()) {
+            a = (float) ((Map.Entry) itA.next()).getValue();
+            w = (float) ((Map.Entry) itW.next()).getValue();
+            if (itB.hasNext())
+                b = (float) ((Map.Entry) itB.next()).getValue();
+            else
+                b = 0.0f;
                 
-        return new Object[]{};
+            z =  a * w + b;
+            zArray.add(z);
+        }
+        
+        float delta = (a - desired) * derivativeReLu(zArray.get(zArray.size() - 1));
+        itW = weightsMap.entrySet().iterator();
+        itB = biasesMap.entrySet().iterator();
+        
+        while (itB.hasNext()) {
+            Map.Entry pair = (Map.Entry) itB.next();
+            if (((String) pair.getKey()).equals("node in last layer"))
+                pair.setValue(delta);
+        }
+        
+        while (itW.hasNext()) {
+            Map.Entry pair = (Map.Entry) itW.next();
+            if (((String) pair.getKey()).equals("node in last layer")) // Need to find each node in the last layer and give it the appropriate delta
+                pair.setValue(delta * output["corresponding node"]); // Need to find the output value of the node found above and assign a new value
+        }
+        
+        for (int i = numHiddenLayers; i > 0 ; i--) {
+            if (itW.hasNext()) {
+                Map.Entry pair = (Map.Entry) itW.next();
+            }
+            z = zArray.get(zArray.size() - i);
+            dr = derivativeReLu(z);
+            
+            delta = weightsMap.get("each node on layer i + 1") * delta * dr;
+            newBiases.put("each node on layer i", delta);
+            newWeights.put("each node on layer i", delta * "activation of each node on layer i");
+        }
+                
+        return new Object[]{newWeights, newBiases};
     }
     
     /**
-     * Calculates the cost function of the network, used in back propagation.
+     * Calculates the cost function of the network used in back propagation.
      * Returns the updated weights and biases to be used in the network for the
      * next epoch.
      * @param layerIndex
@@ -503,5 +533,13 @@ public class OAPNnet {
      */
     public float calculateDerivative(float value) {
         return value * (1.0f - value);
+    }
+    
+    public float derivativeReLu(float sum) {
+        if (sum > 0) {
+            return 1.0f;
+        } else {
+            return 0.0f;
+        }
     }
 }
