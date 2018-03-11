@@ -14,6 +14,8 @@ import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author Nick Kirkpatrick
@@ -339,6 +341,83 @@ public class OAPNnet {
     }
     
     /**
+     * Function to update the weight of each connection based on the node's last
+     * activation and its error. Calls backpropagation() to find new weights.
+     * @param epoch
+     * @param desired
+     * @param learningRate
+     */
+    public void updateWeights(float[] epoch, float desired, float learningRate) {
+        HashMap<String, Float> newWeights = new HashMap();
+        HashMap<String, Float> newBiases = new HashMap();
+        HashMap<String, Float> weightDeltas;
+        HashMap<String, Float> biasDeltas;
+        
+        for(int i = 0; i < epoch.length; i++) {
+            Object arrays[] = backpropagation(lastLayerOutput, desired);
+            weightDeltas = (HashMap<String, Float>) arrays[0];
+            biasDeltas = (HashMap<String, Float>) arrays[1];
+            
+            Iterator itW = weightsMap.entrySet().iterator();
+            Iterator itB = biasesMap.entrySet().iterator();
+            String wKey, bKey;
+            for (int j = 0; j < weightsMap.size(); j++) {
+                wKey = (String) ((Map.Entry)itW.next()).getKey();
+                bKey = (String) ((Map.Entry)itB.next()).getKey();
+                
+                newWeights.put(wKey, weightsMap.get(wKey) + weightDeltas.get(wKey));
+                newBiases.put(bKey, biasesMap.get(bKey) + biasDeltas.get(bKey));
+            }
+        }
+        
+        Iterator itW = weightsMap.entrySet().iterator();
+        Iterator itB = biasesMap.entrySet().iterator();
+        String wKey, bKey;
+        for (int k = 0; k < weightsMap.size(); k++) {
+            wKey = (String) ((Map.Entry)itW.next()).getKey();
+            bKey = (String) ((Map.Entry)itB.next()).getKey();
+            
+            weightsMap.put(wKey, weightsMap.get(wKey) - (learningRate/epoch.length) * newWeights.get(wKey));
+            biasesMap.put(bKey, biasesMap.get(bKey) - (learningRate/epoch.length) * newWeights.get(bKey));
+        }
+    }
+    
+    /**
+     * A major step of neural network training is backwards propagation of error
+     * and activation values. This function finds the error of each node in each
+     * layer and stores that value in the node to be used in updateWeights().
+     * @param output
+     * @param desired
+     * @return 
+     */
+    public Object[] backpropagation(float[] output, float desired) {
+        /* PSEUDOCODE IMPLEMENTATION */
+        // for each node in outputLayer:
+            // errorsMap.put(node.toString(), expectedOutput - node.activation);
+            // node.delta = calculateDelta(node);
+        // for each layer in the network (starting with the last hidden layer, ending with input layer):
+            // for each node in currentLayer:
+                // errorsMap.put(node.toString(), (weight of pipe connecting this node and node of last layer) * 
+                //                                (connected node of last layer).delta)
+                // NOTE: Will likely have to change input/output arrays in 
+                //       VisualNode to public. Need to talk to group first.
+                // node.delta = calculateDelta(node);
+                
+                
+        // Find a way to grab all activations from neural network at any given point, store in HashMap
+        HashMap<String, Float[]> activations = new HashMap();
+        HashMap<String, Float> newWeights = new HashMap();
+        HashMap<String, Float> newBiases = new HashMap();
+        
+        Iterator itW = weightsMap.entrySet().iterator();
+        Iterator itB = biasesMap.entrySet().iterator();
+        
+        
+                
+        return new Object[]{};
+    }
+    
+    /**
      * Calculates the cost function of the network, used in back propagation.
      * Returns the updated weights and biases to be used in the network for the
      * next epoch.
@@ -405,27 +484,6 @@ public class OAPNnet {
 
         return costGradient;
     }
-
-    /**
-     * A major step of neural network training is backwards propagation of error
-     * and activation values. This function finds the error of each node in each
-     * layer and stores that value in the node to be used in updateWeights().
-     */
-    public void backpropagation() {
-        /* PSEUDOCODE IMPLEMENTATION */
-        // for each node in outputLayer:
-            // errorsMap.put(node.toString(), expectedOutput - node.activation);
-            // node.delta = calculateDelta(node);
-        // for each layer in the network (starting with the last hidden layer, ending with input layer):
-            // for each node in currentLayer:
-                // errorsMap.put(node.toString(), (weight of pipe connecting this node and node of last layer) * 
-                //                                (connected node of last layer).delta)
-                // NOTE: Will likely have to change input/output arrays in 
-                //       VisualNode to public. Need to talk to group first.
-                // node.delta = calculateDelta(node);
-                
-        
-    }
     
     /**
      * Helper function used in backpropagation() to assign the delta of
@@ -445,47 +503,5 @@ public class OAPNnet {
      */
     public float calculateDerivative(float value) {
         return value * (1.0f - value);
-    }
-    
-    /**
-     * Function to update the weight of each connection based on the node's last
-     * activation and its error.
-     * @param epoch
-     * @param learningRate
-     */
-    public void updateWeights(float[] epoch, float learningRate) {
-        /* PSEUDOCODE IMPLEMENTATION */
-        // float inputs[];
-        // for i = 0 -> number of layers in network:
-            // if layer is inputLayer:
-                // inputs = original input values;
-            // else:
-                // inputs = output of nodes of last layer;
-            // for j = 0 -> number of nodes in layer:
-                // pipe = pipe connecting node from last layer to current node
-                // weightsMap.put(pipe, weightsMap.get(pipe) += 0.1 * node.delta * input[j]);
-        
-        for (int i = 0; i < hiddenLayers.length; i++) {
-        /* if node is inputlayer () {
-            static Pipe<MessageSchemaDynamic>[] toFirstHiddenLayer;
-            inputs = original input values;
-            }
-           else {
-            inputs = output of nodes of last layer
-            }
-           for (int j = 0; j < hiddenNodes.length; j++) {
-                pipe = pipe connecting node from last layer to current node
-                weightsMap.put(pipe, weightsMap.get(pipe) += 0.1 * node.delta * input[j]);
-            } */
-          } 
-        
-        float newWeights[weightsMap.size()];
-        float newBiases[biasesMap.size()];
-        float weight_deltas[weightsMap.size()];
-        float bias_deltas[biasesMap.size()];
-        
-        for(int i = 0; i < epoch.length; i++) {
-            
-        }
     }
 }
