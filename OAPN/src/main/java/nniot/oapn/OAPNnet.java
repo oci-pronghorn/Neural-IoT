@@ -17,6 +17,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.HashSet;
 
 /**
  * @author Nick Kirkpatrick
@@ -51,6 +54,7 @@ public class OAPNnet {
     static Pipe<MessageSchemaDynamic>[] toFirstHiddenLayer;
     static Pipe<MessageSchemaDynamic>[][][] hiddenLayers;
     static Pipe<MessageSchemaDynamic>[] fromLastHiddenLayer;
+    static ArrayList<VisualNode[]> nodesByLayer;
 
     static int numHiddenLayers;
     static int numHiddenNodes;
@@ -202,6 +206,10 @@ public class OAPNnet {
         config.hideLabels();
 
         final StageFactory<MessageSchemaDynamic> factory = new VisualStageFactory();
+        Set<VisualNode> allNodes = new HashSet<>();
+        Set<VisualNode> currNodes = new HashSet<>();
+        Set<VisualNode> temp = new HashSet<>();
+        nodesByLayer = new ArrayList<>();
 
         int inputsCount;
         if (isTraining) {
@@ -213,38 +221,33 @@ public class OAPNnet {
         //Create initial pipe layer
         toFirstHiddenLayer = Pipe.buildPipes(inputsCount, config);
         inputStage.newInstance(gm, data, toFirstHiddenLayer);
+        
+        //Create input layer nodes and add them to nodesByLayer ArrayList
         hiddenLayers[0] = NeuralGraphBuilder.buildPipeLayer(gm, config, toFirstHiddenLayer, numHiddenNodes, factory);
+        allNodes.addAll(Arrays.asList((VisualNode[]) GraphManager.allStages(gm)));
+        currNodes.addAll(Arrays.asList((VisualNode[]) GraphManager.allStages(gm)));
+        nodesByLayer.add(currNodes.toArray(new VisualNode[1]));
 
-        //Create as many hidden layers as are specified by argument
+        //Create as many hidden layers as are specified by argument, add each layer to the nodesByLayer
         for (int i = 1; i < numHiddenLayers; i++) {
             hiddenLayers[i] = NeuralGraphBuilder.buildPipeLayer(gm, config, hiddenLayers[i - 1], numHiddenNodes, factory);
+            currNodes.addAll(Arrays.asList((VisualNode[]) GraphManager.allStages(gm)));
+            temp = currNodes;
+            currNodes.removeAll(allNodes);
+            allNodes = temp;
+            nodesByLayer.add(currNodes.toArray(new VisualNode[1]));
         }
         //Create final pipe layer
         fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[hiddenLayers.length], factory);
 
         //Create instance of output stage
         outputStage.newInstance(gm, data, fromLastHiddenLayer, "");
-
-    }
-    
-     /**
-     * ***UNDER CONSTRUCTION***
-     * Xavier initialization is used for weight initialization
-     * It helps ensure that the weights aren't too small nor too large
-     * will need to find weights from Gaussian distribution
-     * with mean=0.
-     * read a few resources that said Xavier DOESN'T work well with ReLu...
-     * need to determine what choice is better
-     */
-    /**
-    public float XavierInitialization(float weight) {
-        //var(w) = 2/numNodes
-        int mean = 0;
-        numHiddenNodes;
         
-        return weight;
+        //Add output layer to nodesByLayer
+        currNodes.addAll(Arrays.asList((VisualNode[]) GraphManager.allStages(gm)));
+        currNodes.removeAll(allNodes);
+        nodesByLayer.add(currNodes.toArray(new VisualNode[1]));
     }
-    */
     
     /**
      * Initialize initial weights randomly for forward propagation; values 
@@ -255,8 +258,6 @@ public class OAPNnet {
         return (float) Math.random();
     }
     
-    // Logic error? Assigning multiple values (weight and bias) to single key, results in overwriting older data?
-    // Possible fix: add "_W" to weight key name and "_B" to bias key name
     public void initializeWeightMap() throws FileNotFoundException, IOException {
         //If we're in training mode, all weights stay at one
         if (isTraining) {
