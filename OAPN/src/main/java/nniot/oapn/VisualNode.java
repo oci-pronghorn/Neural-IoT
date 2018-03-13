@@ -12,49 +12,46 @@ public class VisualNode extends PronghornStage {
 
     public final Pipe<MessageSchemaDynamic>[] input;
     public final Pipe<MessageSchemaDynamic>[] output;
-    private float[] biases;
+    private float bias;
     private float[] weights;
-    public float result; //activation value
-    public float delta;
+    private float result; //activation value
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
         this.input = new Pipe[]{input};
         this.output = output;
-        buildBiases();
-        buildWeights();
+        updateBias();
+        updateWeights();
     }
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
         this.input = input;
         this.output = output;
-        buildBiases();
-        buildWeights();
+        updateBias();
+        updateWeights();
     }
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output) {
         super(gm, input, output);
         this.input = input;
         this.output = new Pipe[]{output};
-        buildBiases();
-        buildWeights();
+        updateBias();
+        updateWeights();
     }
-
-    private void buildWeights() {
+    
+    
+    //Loop that pulls weights from singleton dictionary that uses nodes as keys
+    private void updateWeights() {
         this.weights = new float[this.input.length];
-        //loop pulls weights from singleton dictionary that uses pipes as keys
         for (int i = 0; i < input.length; i++) {
             weights[i] = OAPNnet.weightsMap.get(input[i].toString());
         }
     }
-
-    private void buildBiases() {
-        this.biases = new float[this.input.length];
-        //loop pulls weights from singleton dictionary that uses pipes as keys
-        for (int i = 0; i < input.length; i++) {
-            biases[i] = OAPNnet.biasesMap.get(this.toString());
-        }
+    
+    //Grab bias from singleton dictionary that uses nodes as keys
+    private void updateBias() {
+        this.bias = OAPNnet.biasesMap.get(this.toString());
     }
 
     /**
@@ -71,7 +68,7 @@ public class VisualNode extends PronghornStage {
             while (--i >= 0) {
                 float value = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
-                sum += (value * weights[i]) + biases[i];
+                sum += (value * weights[i]) + bias;
             }
 
             //send this value to all the down stream nodes
@@ -101,6 +98,10 @@ public class VisualNode extends PronghornStage {
         } else {
             return 0.0f;
         }
+    }
+    
+    public float getActivation() {
+        return result;
     }
 
     private int availCount() {

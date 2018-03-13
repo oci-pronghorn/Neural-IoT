@@ -355,15 +355,15 @@ public class OAPNnet {
         HashMap<String, Float> weightDeltas;
         HashMap<String, Float> biasDeltas;
         
-        for(int i = 0; i < epoch.length; i++) {
-            Object arrays[] = backpropagation(lastLayerOutput, desired);
+        for(int j = 0; j < epoch.length; j++) {
+            Object arrays[] = backpropagation(desired);
             weightDeltas = (HashMap<String, Float>) arrays[0];
             biasDeltas = (HashMap<String, Float>) arrays[1];
             
             Iterator itW = weightsMap.entrySet().iterator();
             Iterator itB = biasesMap.entrySet().iterator();
             String wKey, bKey;
-            for (int j = 0; j < weightsMap.size(); j++) {
+            for (int k = 0; k < weightsMap.size(); k++) {
                 wKey = (String) ((Map.Entry)itW.next()).getKey();
                 bKey = (String) ((Map.Entry)itB.next()).getKey();
                 
@@ -388,11 +388,10 @@ public class OAPNnet {
      * A major step of neural network training is backwards propagation of error
      * and activation values. This function finds the error of each node in each
      * layer and stores that value in the node to be used in updateWeights().
-     * @param output
      * @param desired
      * @return 
      */
-    public Object[] backpropagation(float[] output, float desired) {
+    public Object[] backpropagation(float desired) {
         // Find a way to grab all activations from neural network at any given point, store in HashMap
         HashMap<String, Float> activations = new HashMap();
         HashMap<String, Float> newWeights = new HashMap();
@@ -420,101 +419,104 @@ public class OAPNnet {
         float delta = (a - desired) * derivativeReLu(zArray.get(zArray.size() - 1));
         itW = weightsMap.entrySet().iterator();
         itB = biasesMap.entrySet().iterator();
+        VisualNode lastLayer[] = nodesByLayer.get(nodesByLayer.size() - 1);
         
         while (itB.hasNext()) {
             Map.Entry pair = (Map.Entry) itB.next();
-            if (((String) pair.getKey()).equals("node in last layer"))
-                pair.setValue(delta);
+            for (int i = 0; i < lastLayer.length; i++) {
+                if (((String) pair.getKey()).equals(lastLayer[i].toString()))
+                    pair.setValue(delta);
+            }
         }
         
         while (itW.hasNext()) {
             Map.Entry pair = (Map.Entry) itW.next();
-            if (((String) pair.getKey()).equals("node in last layer")) // Need to find each node in the last layer and give it the appropriate delta
-                pair.setValue(delta * output["corresponding node"]); // Need to find the output value of the node found above and assign a new value
+            for (int i = 0; i < lastLayer.length; i++) {
+                if (((String) pair.getKey()).equals(lastLayer[i].toString())) // Need to find each node in the last layer and give it the appropriate delta
+                    pair.setValue(delta * lastLayer[i].getActivation()); // Need to find the output value of the node found above and assign a new value
+            }
         }
         
         for (int i = numHiddenLayers; i > 0 ; i--) {
-            if (itW.hasNext()) {
-                Map.Entry pair = (Map.Entry) itW.next();
-            }
             z = zArray.get(zArray.size() - i);
             dr = derivativeReLu(z);
-            
-            delta = weightsMap.get("each node on layer i + 1") * delta * dr;
-            newBiases.put("each node on layer i", delta);
-            newWeights.put("each node on layer i", delta * "activation of each node on layer i");
+            for (int j = 0; j < nodesByLayer.get(i).length; j++) {
+                delta = weightsMap.get(nodesByLayer.get(i + 1)[j].toString()) * delta * dr;
+                newBiases.put(nodesByLayer.get(i)[j].toString(), delta);
+                newWeights.put(nodesByLayer.get(i - 1)[j].toString(), delta * nodesByLayer.get(i)[j].getActivation());
+            }
         }
                 
         return new Object[]{newWeights, newBiases};
     }
     
-    /**
-     * Calculates the cost function of the network used in back propagation.
-     * Returns the updated weights and biases to be used in the network for the
-     * next epoch.
-     * @param layerIndex
-     * @param trainingDataIndex
-     * @return 
-     */
-    public float[] calculateCost(int layerIndex, int trainingDataIndex) {
-        // TODO: Finish cost function
-        // Note: currently written recursively, may be changed to more
-        //       typical iterative style
-        
-        if (layerIndex == 0)
-            // return value of the input nodes' activations
-            return epochsSet[0][trainingDataIndex];
-        
-        float currentLayer[];
-        
-        if (layerIndex == numHiddenLayers + 1)
-            currentLayer = fromLastHiddenLayer;
-        else
-            currentLayer = hiddenLayers[layerIndex];
-        
-        // need set of desired output values for each piece of training data
-        // z_j = sum(weight_i * activation_i) + bias
-        //  z is weighted sum of a layer
-        // cost_0 = sum((activation_i - desiredOutput_i)^2)
-        // delCost_0 / delAct = 2(activation - desiredOutput)
-        // delAct / delZ = derivative of sigmoid
-        // delZ / delWeight = Act of last layer
-        
-        float desiredOutput = trainingData[trainingDataIndex][numAttributes + 1];
-        float weightedSum = 0.0f; // z
-        for (int i = 0; i < hiddenLayers.length + 2; i++) {
-            for (int j = 0; j < hiddenLayers[i].length; j++) {
-                for (int k = 0; k < hiddenLayers[i][j].length; k++) {
-                    // weightedSum += weight of each pipe * activation of connected node in current layer
-                    weightedSum += weightsMap.get(hiddenLayers[i][j][k].toString()) * hiddenLayers[i][j][k].value;
-                }
-            }
-        }
-        
-        float costGradientBiases[biasesMap.size()];
-        float costGradientWeights[weightsMap.size()];
-        
-        for (int i = 0; i < currentLayer.length; i++) {
-            // delC / delA = 2(current layer node's result - desiredOutput)
-            float delCdelA = 2 * (currentLayer[i].result - desiredOutput);
-
-            // delA / delZ = derivative of rectifying function(z), z = weighted sum
-            float delAdelZ = derivativeReLu(weightedSum);
-
-            // delZ / delW = activation of node of last layer
-            float delZdelW = calculateCost(layerIndex - 1, trainingDataIndex - 1);
-            
-            float delZdelB = 1;
-
-            // delC / delW = product of each other partial derivative
-            float delCdelW = delCdelA * delAdelZ * delZdelW;
-            
-            float delCdelB = 
-            costGradient[i] = delCdelW;
-        }
-
-        return costGradient;
-    }
+//    /**
+//     * Calculates the cost function of the network used in back propagation.
+//     * Returns the updated weights and biases to be used in the network for the
+//     * next epoch.
+//     * @param layerIndex
+//     * @param trainingDataIndex
+//     * @return 
+//     */
+//    public float[] calculateCost(int layerIndex, int trainingDataIndex) {
+//        // TODO: Finish cost function
+//        // Note: currently written recursively, may be changed to more
+//        //       typical iterative style
+//        
+//        if (layerIndex == 0)
+//            // return value of the input nodes' activations
+//            return epochsSet[0][trainingDataIndex];
+//        
+//        float currentLayer[];
+//        
+//        if (layerIndex == numHiddenLayers + 1)
+//            currentLayer = fromLastHiddenLayer;
+//        else
+//            currentLayer = hiddenLayers[layerIndex];
+//        
+//        // need set of desired output values for each piece of training data
+//        // z_j = sum(weight_i * activation_i) + bias
+//        //  z is weighted sum of a layer
+//        // cost_0 = sum((activation_i - desiredOutput_i)^2)
+//        // delCost_0 / delAct = 2(activation - desiredOutput)
+//        // delAct / delZ = derivative of sigmoid
+//        // delZ / delWeight = Act of last layer
+//        
+//        float desiredOutput = trainingData[trainingDataIndex][numAttributes + 1];
+//        float weightedSum = 0.0f; // z
+//        for (int i = 0; i < hiddenLayers.length + 2; i++) {
+//            for (int j = 0; j < hiddenLayers[i].length; j++) {
+//                for (int k = 0; k < hiddenLayers[i][j].length; k++) {
+//                    // weightedSum += weight of each pipe * activation of connected node in current layer
+//                    weightedSum += weightsMap.get(hiddenLayers[i][j][k].toString()) * hiddenLayers[i][j][k].value;
+//                }
+//            }
+//        }
+//        
+//        float costGradientBiases[biasesMap.size()];
+//        float costGradientWeights[weightsMap.size()];
+//        
+//        for (int i = 0; i < currentLayer.length; i++) {
+//            // delC / delA = 2(current layer node's result - desiredOutput)
+//            float delCdelA = 2 * (currentLayer[i].result - desiredOutput);
+//
+//            // delA / delZ = derivative of rectifying function(z), z = weighted sum
+//            float delAdelZ = derivativeReLu(weightedSum);
+//
+//            // delZ / delW = activation of node of last layer
+//            float delZdelW = calculateCost(layerIndex - 1, trainingDataIndex - 1);
+//            
+//            float delZdelB = 1;
+//
+//            // delC / delW = product of each other partial derivative
+//            float delCdelW = delCdelA * delAdelZ * delZdelW;
+//            
+//            float delCdelB = 
+//            costGradient[i] = delCdelW;
+//        }
+//
+//        return costGradient;
+//    }
     
     /**
      * Helper function used in backpropagation() to assign the delta of
@@ -523,7 +525,7 @@ public class OAPNnet {
      * @return
      */
     public float calculateDelta(VisualNode node) {
-        return errorsMap.get(node.toString()) * calculateDerivative(node.result);
+        return errorsMap.get(node.toString()) * calculateDerivative(node.getActivation());
     }
     
     /**
