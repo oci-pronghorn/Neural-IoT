@@ -100,6 +100,14 @@ public class VisualNode extends PronghornStage {
     public float getActivation() {
         return result;
     }
+    
+    public float getBias() {
+        return bias;
+    }
+    
+    public float[] getWeights() {
+        return weights;
+    }
 
     private int availCount() {
         int avail = messagesToConsume();
