@@ -16,5 +16,4 @@ nbactions.xml
 /.project
 /Attribute FileIOTest/nbproject/private/
 /Attribute FileIOTest/build/
-*/OUTPUT/
-OAPN/OUTPUT/
+*/OUTPUT
