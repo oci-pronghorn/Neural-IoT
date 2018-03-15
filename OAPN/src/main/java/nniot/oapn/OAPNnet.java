@@ -70,7 +70,6 @@ public class OAPNnet {
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
         if (isTraining) {
             trainingData = readInData(trainingData, trainingDataFN);
-            
             buildVisualNeuralNet(gm, trainingData, numHiddenLayers, numHiddenNodes);
         } else {
             testingData = readInData(testingData, testDataFN);
@@ -87,6 +86,16 @@ public class OAPNnet {
             System.out.println("File " + e.toString() + " not found.");
         } catch (IOException e) {
             System.out.println("File " + e.toString() + "is inaccessible.");
+        }
+        
+        System.out.println("Generating epochs...");
+        generateEpochs(trainingData);
+        //Create array containing each epoch's examples' outputs and the desired outputs
+        //updateWeights() takes float[]
+        for (int i = 0; i < epochsSet.length; i++) {
+            for (int j = 0; j < epochsSet[i].length; j++) {
+                updateWeights(epochsSet[i], epochsSet[i][epochsSet[i].length - 1], 0.5);
+            }
         }
     }
 
@@ -191,7 +200,7 @@ public class OAPNnet {
         
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         stages.add(currNodes.toArray(new PronghornStage[0]));
-        System.out.println(stages.get(0).length);
+        //System.out.println(stages.get(0).length);
         
         //Create data input stage, and add to allNodes so it is not counted as a data-holding stage
         inputStage.newInstance(gm, data, toFirstHiddenLayer);
@@ -208,7 +217,7 @@ public class OAPNnet {
             prevNodes.addAll(temp);
             //System.out.println(prevNodes);
             stages.add(currNodes.toArray(new PronghornStage[0]));
-            System.out.println(stages.get(i).length);
+            //System.out.println(stages.get(i).length);
         }
         //Create final pipe layer
         fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[numHiddenLayers - 1], factory);
@@ -221,7 +230,7 @@ public class OAPNnet {
         currNodes.removeAll(prevNodes);
         //System.out.println(currNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
-        System.out.println(stages.get(stages.size() - 1).length);
+        //System.out.println(stages.get(stages.size() - 1).length);
         
         for (int i = 0; i < stages.size(); i++) {
             VisualNode nodes[] = null;
@@ -282,11 +291,16 @@ public class OAPNnet {
     }
     
     /**
-     * Initialize weights randomly for forward propagation; values 
+     * Initialize weights randomly for the neural net; values 
      * will be greater than or equal to 0.00 and less than or equal to 1.0.
-     * @return float
+     * @return float[]
      */
     public static float initializeWeight() {
+        //float[] arr = new float[length];
+        //for (int i = 0; i < length; i++) {
+        //    arr[i] = (float) Math.random();
+        //}
+        //return arr;
         return (float) Math.random();
     }
     
@@ -296,8 +310,15 @@ public class OAPNnet {
             for (int i = 0; i < nodesByLayer.size(); i++) {
                 for (int j = 0; j < nodesByLayer.get(i).length; j++) {
                     VisualNode node = nodesByLayer.get(i)[j];
-                    weightsMap.put(node.toString(), initializeWeight());
+                    for (int k = 0; k < node.input.length; k++) {
+                        float weight = initializeWeight();
+                        weightsMap.put(node.input[k].toString(), weight);
+                        node.setWeight(k, weight);
+                    }
+                    //weightsMap.put(node.toString(), initializeWeights(node.input.length));
                     biasesMap.put(node.toString(), new Float(0.0));
+                    node.setBias(new Float(0.0));
+                    //node.setWeights(initializeWeights(node.getWeightsLength()));
                 }
             }
         } else {
@@ -308,15 +329,13 @@ public class OAPNnet {
                 String k = line.split(" ")[0];
                 Float v = new Float(line.split(" ")[1].replace("\n", ""));
                 weightsMap.put(k, v);
-
             }
-            weightBR.close();
             while ((line = biasBR.readLine()) != null) {
                 String k = line.split(" ")[0];
                 Float v = new Float(line.split(" ")[1].replace("\n", ""));
                 biasesMap.put(k, v);
-
             }
+            weightBR.close();
             biasBR.close();          
         }
     }
@@ -361,7 +380,7 @@ public class OAPNnet {
         HashMap<String, Float> biasDeltas;
         
         for(int j = 0; j < epoch.length; j++) {
-            Object arrays[] = backpropagation(desired);
+            Object arrays[] = backpropagation(epoch[epoch.length - 1], desired);
             weightDeltas = (HashMap<String, Float>) arrays[0];
             biasDeltas = (HashMap<String, Float>) arrays[1];
             
@@ -393,10 +412,11 @@ public class OAPNnet {
      * A major step of neural network training is backwards propagation of error
      * and activation values. This function finds the error of each node in each
      * layer and stores that value in the node to be used in updateWeights().
+     * @param output
      * @param desired
      * @return 
      */
-    public static Object[] backpropagation(float desired) {
+    public static Object[] backpropagation(float output, float desired) {
         // Find a way to grab all activations from neural network at any given point, store in HashMap
         HashMap<String, Float> activations = new HashMap();
         HashMap<String, Float> newWeights = new HashMap();
@@ -417,7 +437,7 @@ public class OAPNnet {
             else
                 b = 0.0f;
                 
-            z =  a * w + b;
+            z = a * w + b;
             zArray.add(z);
         }
         

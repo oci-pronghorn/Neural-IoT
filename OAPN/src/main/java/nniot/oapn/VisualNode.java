@@ -18,37 +18,24 @@ public class VisualNode extends PronghornStage {
         super(gm, input, output);
         this.input = new Pipe[]{input};
         this.output = output;
-        //updateBias();
-        //updateWeights();
+        this.bias = 0;
+        this.weights = new float[] { 0.0f };
     }
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
         this.input = input;
         this.output = output;
-        //updateBias();
-        //updateWeights();
+        this.bias = 0;
+        this.weights = new float[input.length];
     }
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output) {
         super(gm, input, output);
         this.input = input;
         this.output = new Pipe[]{output};
-        //updateBias();
-        //updateWeights();
-    }
-    
-    //Grab bias from singleton dictionary that uses nodes as keys
-    private void updateBias() {
-        this.bias = OAPNnet.biasesMap.get(this.toString());
-    }
-        
-    //Loop that pulls weights from singleton dictionary that uses nodes as keys
-    private void updateWeights() {
-        this.weights = new float[this.input.length];
-        for (int i = 0; i < input.length; i++) {
-            weights[i] = OAPNnet.weightsMap.get(input[i].toString());
-        }
+        this.bias = 0;
+        this.weights = new float[input.length];
     }
 
     /**
@@ -96,18 +83,6 @@ public class VisualNode extends PronghornStage {
             return 0.0f;
         }
     }
-    
-    public float getActivation() {
-        return result;
-    }
-    
-    public float getBias() {
-        return bias;
-    }
-    
-    public float[] getWeights() {
-        return weights;
-    }
 
     private int availCount() {
         int avail = messagesToConsume();
@@ -138,5 +113,36 @@ public class VisualNode extends PronghornStage {
         }
         return results;
     }
-
+    
+        public float getActivation() {
+        return result;
+    }
+    
+    public float getBias() {
+        return bias;
+    }
+    
+    public float[] getWeights() {
+        return weights;
+    }
+    
+    public int getWeightsLength() {
+        return weights.length;
+    }
+    
+    public void setBias(float bias) {
+        this.bias = bias;
+    }
+    
+    public void setWeights(float[] weights) {
+        if (this.weights.length == weights.length) {
+            for (int i = 0; i < weights.length; i++) {
+                this.weights[i] = weights[i];
+            }
+        }
+    }
+    
+    public void setWeight(int index, float weight) {
+        this.weights[index] = weight;
+    }
 }
