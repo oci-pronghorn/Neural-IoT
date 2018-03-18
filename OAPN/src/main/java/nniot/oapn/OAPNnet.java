@@ -328,7 +328,7 @@ public class OAPNnet {
      * @param biasesOutputFile
      * @throws IOException
      */
-    public static void saveWeightMap(String weightsOutputFile, String biasesOutputFile)
+    public static void writeWeightsBiases(String weightsOutputFile, String biasesOutputFile)
             throws IOException {
         BufferedWriter weightsBW = new BufferedWriter(new FileWriter(
                 weightsOutputFile));
@@ -337,9 +337,11 @@ public class OAPNnet {
         
         for (int i = 0; i < nodesByLayer.size(); i++) {
             for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                    String key = nodesByLayer.get(i)[j].toString();
-                    weightsBW.write(key + " " + weightsMap.get(key) + "\n");
-                    biasesBW.write(key + " " + biasesMap.get(key) + "\n");
+                String key = nodesByLayer.get(i)[j].toString();
+                for(int k = 0; k < nodesByLayer.get(i)[j].getWeights().length; k++){
+                    weightsBW.write(key + " " + nodesByLayer.get(i)[j].getWeights()[k] + "\n");
+                }
+                biasesBW.write(key + " " + nodesByLayer.get(i)[j].getBias() + "\n");
             }
         }
         
