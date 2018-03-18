@@ -49,7 +49,7 @@ public class OAPNnet {
     static Float[][] trainingData;
     static Float[][] testingData;
     
-    static Float[][][] epochsSet;
+    static Float[][][] epochsSet; // 3d-array of each epoch, containing examples, which contain their attributes
     
     static Pipe<MessageSchemaDynamic>[] toFirstHiddenLayer;
     static Pipe<MessageSchemaDynamic>[][][] hiddenLayers;
@@ -94,7 +94,7 @@ public class OAPNnet {
         //updateWeights() takes float[]
         for (int i = 0; i < epochsSet.length; i++) {
             for (int j = 0; j < epochsSet[i].length; j++) {
-                updateWeights(epochsSet[i], epochsSet[i][epochsSet[i].length - 1], 0.5);
+                updateWeights(epochsSet[i], 0.5f);
             }
         }
     }
@@ -372,29 +372,29 @@ public class OAPNnet {
      * Function to update the weight of each connection based on the node's last
      * activation and its error. Calls backpropagation() to find new weights.
      * @param epoch
-     * @param desired
      * @param learningRate
      */
-    public static void updateWeights(float[] epoch, float desired, float learningRate) {
+    public static void updateWeights(Float[][] epoch, float learningRate) {
         HashMap<String, Float> newWeights = new HashMap();
         HashMap<String, Float> newBiases = new HashMap();
         HashMap<String, Float> weightDeltas;
         HashMap<String, Float> biasDeltas;
-        
-        for(int j = 0; j < epoch.length; j++) {
-            Object arrays[] = backpropagation(epoch[epoch.length - 1], desired);
-            weightDeltas = (HashMap<String, Float>) arrays[0];
-            biasDeltas = (HashMap<String, Float>) arrays[1];
-            
-            Iterator itW = weightsMap.entrySet().iterator();
-            Iterator itB = biasesMap.entrySet().iterator();
-            String wKey, bKey;
-            for (int k = 0; k < weightsMap.size(); k++) {
-                wKey = (String) ((Map.Entry)itW.next()).getKey();
-                bKey = (String) ((Map.Entry)itB.next()).getKey();
-                
-                newWeights.put(wKey, weightsMap.get(wKey) + weightDeltas.get(wKey));
-                newBiases.put(bKey, biasesMap.get(bKey) + biasDeltas.get(bKey));
+        for (int i = 0; i < epoch.length; i++) {
+            for (int j = 0; j < epoch[i].length; j++) {
+                Object arrays[] = backpropagation(epoch[j][epoch.length - 1]);
+                weightDeltas = (HashMap<String, Float>) arrays[0];
+                biasDeltas = (HashMap<String, Float>) arrays[1];
+
+                Iterator itW = weightsMap.entrySet().iterator();
+                Iterator itB = biasesMap.entrySet().iterator();
+                String wKey, bKey;
+                for (int k = 0; k < weightsMap.size(); k++) {
+                    wKey = (String) ((Map.Entry)itW.next()).getKey();
+                    bKey = (String) ((Map.Entry)itB.next()).getKey();
+
+                    newWeights.put(wKey, weightsMap.get(wKey) + weightDeltas.get(wKey));
+                    newBiases.put(bKey, biasesMap.get(bKey) + biasDeltas.get(bKey));
+                }
             }
         }
         
@@ -414,39 +414,53 @@ public class OAPNnet {
      * A major step of neural network training is backwards propagation of error
      * and activation values. This function finds the error of each node in each
      * layer and stores that value in the node to be used in updateWeights().
-     * @param output
      * @param desired
      * @return 
      */
-    public static Object[] backpropagation(float output, float desired) {
+    public static Object[] backpropagation(float desired) {
         // Find a way to grab all activations from neural network at any given point, store in HashMap
         HashMap<String, Float> activations = new HashMap();
         HashMap<String, Float> newWeights = new HashMap();
         HashMap<String, Float> newBiases = new HashMap();
         
         Iterator itA = activations.entrySet().iterator();
-        Iterator itW = weightsMap.entrySet().iterator();
-        Iterator itB = biasesMap.entrySet().iterator();
+        Iterator itW;
+        Iterator itB;
         
-        float z, a = 0, w, b, dr; // Z is a number that holds the weighted activation, e.g. z = (a * w) + b
-        ArrayList<Float> zArray = new ArrayList(); // Holds all Z values
+        float z, a = 0, b, dr; // Z is a number that holds the weighted activation, e.g. z = (a * w) + b
+        float[] w;
+        ArrayList<ArrayList<Float>> zArray = new ArrayList(); // Holds all Z values
         
-        while (itW.hasNext() && itA.hasNext()) {
-            a = (float) ((Map.Entry) itA.next()).getValue();
-            w = (float) ((Map.Entry) itW.next()).getValue();
-            if (itB.hasNext())
-                b = (float) ((Map.Entry) itB.next()).getValue();
-            else
-                b = 0.0f;
+        for (int i = 0; i < nodesByLayer.size(); i++) {
+            VisualNode[] nodes = nodesByLayer.get(i);
+            
+            for (int j = 0; j < nodesByLayer.get(i).length; j++) {
+                a = nodes[j].getActivation();
+                w = nodes[j].getWeights();
+                b = nodes[j].getBias();
+                ArrayList<Float> weightedSums = new ArrayList();
+                for (int k = 0; k < w.length; k++) {
+                    weightedSums.add(a * w[k] + b);
+                }
                 
-            z = a * w + b;
-            zArray.add(z);
+                zArray.add(weightedSums);
+            }
         }
-        
-        float delta = (a - desired) * derivativeReLu(zArray.get(zArray.size() - 1));
+        ArrayList<Float> deltas = new ArrayList();
+        for (int i = 0; i < zArray.size(); i++) {
+            for (int j = 0; j < zArray.get(i).size(); j++) {
+                deltas.add((a - desired) * derivativeReLu(zArray.get(i).get(j)));
+            }
+        }
+        //float delta = (a - desired) * derivativeReLu(zArray.get(zArray.size() - 1));
         itW = weightsMap.entrySet().iterator();
         itB = biasesMap.entrySet().iterator();
         VisualNode lastLayer[] = nodesByLayer.get(nodesByLayer.size() - 1);
+        
+        // TODO: check indices of nodes vs deltas, make sure they are in same order
+        for (int i = 0; i < lastLayer.length; i++) {
+            lastLayer[i].setBias(deltas.get(i));
+        }
         
         while (itB.hasNext()) {
             Map.Entry pair = (Map.Entry) itB.next();
