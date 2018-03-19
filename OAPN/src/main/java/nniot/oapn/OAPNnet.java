@@ -444,77 +444,66 @@ public class OAPNnet {
      * @param desired
      * @return
      */
-    public static Object[] backpropagation(float desired) {
-        // Find a way to grab all activations from neural network at any given point, store in HashMap
-        HashMap<String, Float> activations = new HashMap();
-        HashMap<String, Float> newWeights = new HashMap();
-        HashMap<String, Float> newBiases = new HashMap();
-
-        Iterator itA = activations.entrySet().iterator();
-        Iterator itW;
-        Iterator itB;
-
-        float z, a = 0, b, dr; // Z is a number that holds the weighted activation, e.g. z = (a * w) + b
+    public static Object[] backpropagation(float desired) {       
+        float a, b; // Z is a number that holds the weighted activation, e.g. z = (a * w) + b
         float[] w;
         ArrayList<ArrayList<Float>> zArray = new ArrayList(); // Holds all Z values
-
+        ArrayList<ArrayList<Float>> activations = new ArrayList();
+        ArrayList<ArrayList<Float>> layerWeights = new ArrayList();
+        ArrayList<ArrayList<Float>> newBiases = new ArrayList();
+        ArrayList<ArrayList<Float>> newWeights = new ArrayList();
+        ArrayList<Float> activation = new ArrayList();
+        ArrayList<Float> delta;
+        ArrayList<Float> rp;
+        // activations is an array of float[], first being output values of each node in last layer
+        //  and then each sigmoid(z) return value appended
+        for (VisualNode get : nodesByLayer.get(nodesByLayer.size() - 1)) {
+            activation.add(get.getActivation());
+        }
+        activations.add(activation);
+        
         for (int i = 0; i < nodesByLayer.size(); i++) {
             VisualNode[] nodes = nodesByLayer.get(i);
-
+            ArrayList<Float> z;
+            
             for (int j = 0; j < nodesByLayer.get(i).length; j++) {
                 a = nodes[j].getActivation();
                 w = nodes[j].getWeights();
                 b = nodes[j].getBias();
-                ArrayList<Float> weightedSums = new ArrayList();
+                z = new ArrayList();
                 for (int k = 0; k < w.length; k++) {
-                    weightedSums.add(a * w[k] + b);
+                    z.add(a * w[k] + b);
                 }
-
-                zArray.add(weightedSums);
+                
+                zArray.add(z);
+                activation = ReLuArray(z);
+                activations.add(activation);
             }
         }
-        ArrayList<Float> deltas = new ArrayList();
-        for (int i = 0; i < zArray.size(); i++) {
-            for (int j = 0; j < zArray.get(i).size(); j++) {
-                deltas.add((a - desired) * derivativeReLu(zArray.get(i).get(j)));
-            }
-        }
-        //float delta = (a - desired) * derivativeReLu(zArray.get(zArray.size() - 1));
-        itW = weightsMap.entrySet().iterator();
-        itB = biasesMap.entrySet().iterator();
-        VisualNode lastLayer[] = nodesByLayer.get(nodesByLayer.size() - 1);
-
-        // TODO: check indices of nodes vs deltas, make sure they are in same order
-        for (int i = 0; i < lastLayer.length; i++) {
-            lastLayer[i].setBias(deltas.get(i));
-        }
-
-        while (itB.hasNext()) {
-            Map.Entry pair = (Map.Entry) itB.next();
-            for (int i = 0; i < lastLayer.length; i++) {
-                if (((String) pair.getKey()).equals(lastLayer[i].toString())) {
-                    pair.setValue(delta);
-                }
-            }
-        }
-
-        while (itW.hasNext()) {
-            Map.Entry pair = (Map.Entry) itW.next();
-            for (int i = 0; i < lastLayer.length; i++) {
-                if (((String) pair.getKey()).equals(lastLayer[i].toString())) // Need to find each node in the last layer and give it the appropriate delta
-                {
-                    pair.setValue(delta * lastLayer[i].getActivation()); // Need to find the output value of the node found above and assign a new value
-                }
-            }
-        }
-
-        for (int i = numHiddenLayers; i > 0; i--) {
-            z = zArray.get(zArray.size() - i);
-            dr = derivativeReLu(z);
+        
+        delta = dot(costDerivative(activations.get(activations.size() - 1), desired), derivativeReLuArray(zArray.get(zArray.size() - 1)));
+        newBiases.add(delta);
+        newWeights.add(dot(delta, activations.get(activations.size() - 2))); //activations(size - 2) needs to be transposed (?)
+        
+        // TODO: fix matrix math; layerWeights is an nxn matrix and delta is a 1xn matrix, cannot be dot producted
+        for (int i = 0; i < nodesByLayer.size(); i++) {
+            ArrayList<Float> nodeWeights = new ArrayList();
             for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                delta = weightsMap.get(nodesByLayer.get(i + 1)[j].toString()) * delta * dr;
-                newBiases.put(nodesByLayer.get(i)[j].toString(), delta);
-                newWeights.put(nodesByLayer.get(i - 1)[j].toString(), delta * nodesByLayer.get(i)[j].getActivation());
+                float arr[] = nodesByLayer.get(i)[j].getWeights();
+                for (int k = 0; k < arr.length; k++) {
+                    nodeWeights.add(arr[k]);
+                }
+            }
+            layerWeights.add(nodeWeights);
+        }
+        
+        for (int i = nodesByLayer.size() - 1; i > 0; i--) {
+            ArrayList<Float> z = zArray.get(i);
+            rp = derivativeReLuArray(z);
+            for (int j = 0; j < layerWeights.size(); j++) {
+                delta = dot(dot(layerWeights.get(j + 1), delta), rp);
+                newBiases.add(delta);
+                newWeights.add(dot(delta, activations.get(j - 1)));
             }
         }
 
@@ -522,32 +511,62 @@ public class OAPNnet {
     }
 
     /**
-     * Helper function used in backpropagation() to assign the delta of each
-     * node.
-     *
-     * @param node
+     * Helper function used in backpropagation() to assign the delta of
+     * each node.
+     * @param arr
      * @return
      */
-    public static float calculateDelta(VisualNode node) {
-        return errorsMap.get(node.toString()) * calculateDerivative(node.getActivation());
+    public static ArrayList<Float> costDerivative(ArrayList<Float> arr, float desired) {
+        ArrayList<Float> retArr = new ArrayList();
+        for (float i : arr) {
+            retArr.add(i - desired);
+        }
+        return retArr;
     }
 
     /**
-     * Helper function used in back propagation for calculating error of hidden
-     * layers.
-     *
-     * @param value
-     * @return
-     */
-    public static float calculateDerivative(float value) {
-        return value * (1.0f - value);
-    }
 
+     * Calls ReLu() for each element in array passed.
+     * @param arr is an ArrayList of floats
+     * @return ArrayList of floats
+     */
+    public static ArrayList<Float> ReLuArray(ArrayList<Float> arr) {
+        ArrayList<Float> retArr = new ArrayList();
+        for (float i : arr) {
+            retArr.add(ReLu(i));
+        }
+        return retArr;
+    }
+    
+    public static float ReLu(float i) {
+        // Secondary option for rectifier function
+        // return (float) Math.log(1 + Math.exp(i))
+        return Math.max(0, i);
+    }
+    
+    public static ArrayList<Float> derivativeReLuArray(ArrayList<Float> arr) {
+        ArrayList<Float> retArr = new ArrayList();
+        for (float i : arr) {
+            retArr.add(derivativeReLu(i));
+        }
+        return retArr;
+    }
+       
     public static float derivativeReLu(float sum) {
         if (sum > 0) {
             return 1.0f;
         } else {
             return 0.0f;
         }
+    }
+    
+    public static ArrayList<Float> dot(ArrayList<Float> a, ArrayList<Float> b) {
+        if (a.size() != b.size())
+            System.out.println("Dot product attempted between ArrayLists of different lengths.");
+        ArrayList<Float> retArr = new ArrayList();
+        for (int i = 0; i < a.size(); i++) {
+            retArr.add(i, a.get(i) * b.get(i));
+        }
+        return retArr;
     }
 }
