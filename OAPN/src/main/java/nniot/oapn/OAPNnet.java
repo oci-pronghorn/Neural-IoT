@@ -14,9 +14,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
@@ -30,7 +27,7 @@ import java.util.HashSet;
  */
 public class OAPNnet {
 
-    static int numAttributes = 10;
+    static int numAttributes = 13;
     static int numTestRecords = 100;
     static int numTrainingRecords = 50;
     static String testDataFN = ""; //this file will not have classifications
@@ -39,12 +36,8 @@ public class OAPNnet {
     static String biasesInputFN = ""; //this file will have biases obtained via training
     static String biasesOutputFN = "";
 
-    static String trainingDataFN = ""; // this file will already have classifications
+    static String trainingDataFN = "./wineTraining.data"; // this file will already have classifications
     static Boolean isTraining = true;
-    //This map is shared among all stages
-    static HashMap<String, Float> weightsMap;   // associated with pipes
-    static HashMap<String, Float> biasesMap;    // associated with nodes
-    static HashMap<String, Float> errorsMap;    // associated with nodes
 
     static Float[][] trainingData;
     static Float[][] testingData;
@@ -60,9 +53,11 @@ public class OAPNnet {
     static int numHiddenNodes = 4; // default = 4
 
     public static void main(String[] args) throws FileNotFoundException {
-        trainingData = new Float[numTestRecords][numAttributes + 1];
-        testingData = new Float[numTrainingRecords][numAttributes];
+        trainingData = new Float[numTrainingRecords][numAttributes + 1];
+        testingData = new Float[numTestRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
+        
+        //System.out.println("Directory: " + System.getProperty("user.dir"));
 
         interpretCommandLineOptions(args);
 
@@ -401,38 +396,35 @@ public class OAPNnet {
      * @param learningRate
      */
     public static void updateWeights(Float[][] epoch, float learningRate) {
-        HashMap<String, Float> newWeights = new HashMap();
-        HashMap<String, Float> newBiases = new HashMap();
-        HashMap<String, Float> weightDeltas;
-        HashMap<String, Float> biasDeltas;
+        ArrayList<ArrayList<Float>> newWeights = new ArrayList();
+        ArrayList<ArrayList<Float>> weightDeltas = new ArrayList();
+        ArrayList<ArrayList<Float>> biasDeltas = new ArrayList();
+        float currWeight;
+        float currBias;
         for (int i = 0; i < epoch.length; i++) {
             for (int j = 0; j < epoch[i].length; j++) {
                 Object arrays[] = backpropagation(epoch[j][epoch.length - 1]);
-                weightDeltas = (HashMap<String, Float>) arrays[0];
-                biasDeltas = (HashMap<String, Float>) arrays[1];
-
-                Iterator itW = weightsMap.entrySet().iterator();
-                Iterator itB = biasesMap.entrySet().iterator();
-                String wKey, bKey;
-                for (int k = 0; k < weightsMap.size(); k++) {
-                    wKey = (String) ((Map.Entry) itW.next()).getKey();
-                    bKey = (String) ((Map.Entry) itB.next()).getKey();
-
-                    newWeights.put(wKey, weightsMap.get(wKey) + weightDeltas.get(wKey));
-                    newBiases.put(bKey, biasesMap.get(bKey) + biasDeltas.get(bKey));
+                weightDeltas = (ArrayList<ArrayList<Float>>) arrays[0];
+                biasDeltas = (ArrayList<ArrayList<Float>>) arrays[1];
+            }
+            for (int j = 0; j < nodesByLayer.size(); j++) {
+                for (int k = 0; k < nodesByLayer.get(j).length; k++) {
+                    for (int l = 0; l < nodesByLayer.get(j)[k].getWeightsLength(); l++) {
+                        currWeight = nodesByLayer.get(j)[k].getWeight(l);
+                        newWeights.get(k).set(l, currWeight + weightDeltas.get(k).get(l));
+                    }
+                    
+                    float[] weights = new float[newWeights.get(k).size()];
+                    currBias = nodesByLayer.get(j)[k].getBias();
+                    
+                    for (int l = 0; l < weights.length; l++) {
+                        weights[l] = (float) newWeights.get(k).get(l);
+                    }
+                    
+                    nodesByLayer.get(j)[k].setWeights(weights);
+                    nodesByLayer.get(j)[k].setBias(currBias + biasDeltas.get(j).get(k));
                 }
             }
-        }
-
-        Iterator itW = weightsMap.entrySet().iterator();
-        Iterator itB = biasesMap.entrySet().iterator();
-        String wKey, bKey;
-        for (int k = 0; k < weightsMap.size(); k++) {
-            wKey = (String) ((Map.Entry) itW.next()).getKey();
-            bKey = (String) ((Map.Entry) itB.next()).getKey();
-
-            weightsMap.put(wKey, weightsMap.get(wKey) - (learningRate / epoch.length) * newWeights.get(wKey));
-            biasesMap.put(bKey, biasesMap.get(bKey) - (learningRate / epoch.length) * newWeights.get(bKey));
         }
     }
 

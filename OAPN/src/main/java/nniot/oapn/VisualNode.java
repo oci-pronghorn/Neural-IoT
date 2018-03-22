@@ -126,6 +126,10 @@ public class VisualNode extends PronghornStage {
         return weights;
     }
     
+    public float getWeight(int index) {
+        return this.weights[index];
+    }
+    
     public int getWeightsLength() {
         return weights.length;
     }
