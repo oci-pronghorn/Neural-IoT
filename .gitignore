@@ -17,3 +17,5 @@ nbactions.xml
 /Attribute FileIOTest/nbproject/private/
 /Attribute FileIOTest/build/
 */OUTPUT
+!/OAPN/datasets/*
+*/*.data

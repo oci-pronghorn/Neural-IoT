@@ -218,6 +218,8 @@ public class OAPNnet {
         
         //Create final pipe layer
         //fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[numHiddenLayers - 1], factory);
+        
+        //For debugging purposes; creates output layer using first hidden layer instead of last hidden layer
         fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[0], factory);
 
         
