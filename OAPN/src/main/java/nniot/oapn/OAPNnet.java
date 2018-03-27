@@ -201,6 +201,7 @@ public class OAPNnet {
         inputStage.newInstance(gm, data, toFirstHiddenLayer);
         prevNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
 
+        /*
         //Create as many hidden layers as are specified by argument, add each layer to the nodesByLayer
         for (int i = 1; i < numHiddenLayers + 1; i++) {
             hiddenLayers[i] = NeuralGraphBuilder.buildPipeLayer(gm, config, hiddenLayers[i - 1], numHiddenNodes, factory);
@@ -213,10 +214,13 @@ public class OAPNnet {
             //System.out.println(prevNodes);
             stages.add(currNodes.toArray(new PronghornStage[0]));
             //System.out.println(stages.get(i).length);
-        }
+        }*/
+        
         //Create final pipe layer
-        fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[numHiddenLayers - 1], factory);
+        //fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[numHiddenLayers - 1], factory);
+        fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[0], factory);
 
+        
         //Create instance of output stage
         prevNodes.add(outputStage.newInstance(gm, data, fromLastHiddenLayer, ""));
 

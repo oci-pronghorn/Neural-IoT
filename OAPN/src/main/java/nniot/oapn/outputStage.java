@@ -81,18 +81,25 @@ public class outputStage extends PronghornStage {
         outputFileWriter.close();
         if (OAPNnet.isTraining) {
             BufferedWriter out = new BufferedWriter(new FileWriter(weightsFile, false));
-            for (String name : OAPNnet.weightsMap.keySet()) {
-
-                out.write(name.toString() + " " + OAPNnet.weightsMap.get(name) + "\n");
-
+            for (int i = 0; i < OAPNnet.nodesByLayer.size(); i++) {
+                for (int j = 0; j < OAPNnet.nodesByLayer.get(i).length; j++) {
+                    VisualNode node = OAPNnet.nodesByLayer.get(i)[j];
+                    String pipeWeight;
+                    out.write(node.stageId);
+                    for (int k = 0; k < node.input.length; k++) {
+                        out.write(" " + node.input[k].toString() + "," + node.getWeight(k) + " ");
+                    }
+                    out.write("\n");
+                }
             }
 
             out.close();
             out = new BufferedWriter(new FileWriter(biasesFile, false));
-            for (String name : OAPNnet.biasesMap.keySet()) {
-
-                out.write(name.toString() + " " + OAPNnet.biasesMap.get(name) + "\n");
-
+            for (int i = 0; i < OAPNnet.nodesByLayer.size(); i++) {
+                for (int j = 0; j < OAPNnet.nodesByLayer.get(i).length; j++) {
+                    VisualNode node = OAPNnet.nodesByLayer.get(i)[j];
+                    out.write(node.stageId + " " + node.getBias() + "\n");
+                }
             }
 
             out.close();
