@@ -2,24 +2,20 @@ package nniot.oapn;
 
 import com.ociweb.pronghorn.pipe.MessageSchemaDynamic;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import static com.ociweb.pronghorn.stage.PronghornStage.NONE;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class outputStage extends PronghornStage {
 
-    private final Pipe<MessageSchemaDynamic>[] output;
+    private final Pipe<MessageSchemaDynamic>[] input;
 
     private BufferedWriter outputFileWriter;
     private File weightsFile;
@@ -27,6 +23,16 @@ public class outputStage extends PronghornStage {
 
     private final Float[][] data;
 
+    public outputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException, IOException {
+        super(gm, input, NONE);
+        this.input = input;
+
+        this.outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")), false));
+        weightsFile = new File(fname.concat("OUTPUT-weights"));
+        biasesFile = new File(fname.concat("OUTPUT-biases"));
+        this.data = data;
+    }
+    
     public static outputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
         outputStage outputS = null;
         try {
@@ -37,17 +43,7 @@ public class outputStage extends PronghornStage {
         return outputS;
     }
 
-    public outputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException, IOException {
-        super(gm, NONE, output);
-        this.output = output;
-
-        this.outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")), false));
-        weightsFile = new File(fname.concat("OUTPUT-weights"));
-        biasesFile = new File(fname.concat("OUTPUT-biases"));
-        this.data = data;
-
-    }
-
+    @Override
     public void run() {
         try {
             writeOutput();
