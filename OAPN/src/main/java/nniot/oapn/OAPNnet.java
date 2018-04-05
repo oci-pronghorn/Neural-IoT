@@ -27,9 +27,6 @@ import java.util.HashSet;
  */
 public class OAPNnet {
 
-    static int numAttributes = 13;
-    static int numTestRecords = 100;
-    static int numTrainingRecords = 50;
     static String testDataFN = ""; //this file will not have classifications
     static String weightsInputFN = ""; //this file will have weights obtained via training
     static String weightsOutputFN = "";
@@ -49,8 +46,12 @@ public class OAPNnet {
     static Pipe<MessageSchemaDynamic>[] fromLastHiddenLayer;
     static ArrayList<VisualNode[]> nodesByLayer;
 
+    static int numAttributes = 13;
+    static int numTestRecords = 100;
+    static int numTrainingRecords = 50;
     static int numHiddenLayers = 2; // default = 2
     static int numHiddenNodes = 4; // default = 4
+    static int numOutputNodes = 3;
 
     public static void main(String[] args) throws FileNotFoundException {
         trainingData = new Float[numTrainingRecords][numAttributes + 1];
@@ -173,12 +174,13 @@ public class OAPNnet {
         config.hideLabels();
 
         final StageFactory<MessageSchemaDynamic> factory = new VisualStageFactory();
+        final StageFactory<MessageSchemaDynamic> outputFactory = new OutputStageFactory();
         Set<PronghornStage> prevNodes = new HashSet<>();
         Set<PronghornStage> currNodes = new HashSet<>();
         Set<PronghornStage> temp = new HashSet<>();
         ArrayList<PronghornStage[]> stages = new ArrayList<>();
         nodesByLayer = new ArrayList<>();
-        layers = new Pipe[numHiddenLayers + 1][numHiddenNodes][numHiddenNodes];
+        layers = new Pipe[numHiddenLayers + 2][numHiddenNodes][numHiddenNodes];
 
         int inputsCount;
         if (isTraining) {
@@ -199,10 +201,10 @@ public class OAPNnet {
         prevNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         
         //Create data input stage, and add to allNodes so it is not counted as a data-holding stage
-        prevNodes.add(inputStage.newInstance(gm, data, toFirstHiddenLayer));
+        prevNodes.add(InputStage.newInstance(gm, data, toFirstHiddenLayer));
 
         //Create as many hidden layers as are specified by argument, add each layer to the stages array
-        for (int i = 1; i < numHiddenLayers + 1; i++) {
+        for (int i = 1; i < numHiddenLayers; i++) {
             layers[i] = NeuralGraphBuilder.buildPipeLayer(gm, config, layers[i - 1], numHiddenNodes, factory);
             currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
             //System.out.println(currNodes);
@@ -215,25 +217,26 @@ public class OAPNnet {
             prevNodes.addAll(temp);
         }
         
-        //Create final pipe layer
-        fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, layers[numHiddenLayers], factory);
+        //Create final hidden pipe layer
+        fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, layers[numHiddenLayers - 1], factory);
         
-        //For debugging purposes; creates output layer using first hidden layer instead of last hidden layer
-        //fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, hiddenLayers[0], factory);
-
-        //Create instance of output stage
-        prevNodes.add(outputStage.newInstance(gm, data, fromLastHiddenLayer, ""));
-
-        //Add output layer to nodesByLayer
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
-        //System.out.println(currNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
+
+        //Create instance of output stage
+        //prevNodes.add(outputStage.newInstance(gm, data, fromLastHiddenLayer, ""));
+
+        //Add output layer to nodesByLayer
+        //currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        //currNodes.removeAll(prevNodes);
+        //System.out.println(currNodes);
+        //stages.add(currNodes.toArray(new PronghornStage[0]));
 
         for (int i = 0; i < stages.size(); i++) {
             VisualNode nodes[] = new VisualNode[stages.get(i).length];
             for (int j = 0; j < stages.get(i).length; j++) {
-                //System.out.println("Stage at " + "(" + i + "," + j + ") = " + stages.get(i)[j].stageId);
+                System.out.println("Stage at " + "(" + i + "," + j + ") = " + stages.get(i)[j].stageId);
                 //System.out.println("Stage info: " + stages.get(i)[j].toString());
                 VisualNode vn = (VisualNode) GraphManager.getStage(gm, stages.get(i)[j].stageId);
                 //System.out.println("VN: " + vn.toString());

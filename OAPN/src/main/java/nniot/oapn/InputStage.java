@@ -6,18 +6,17 @@ import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import static com.ociweb.pronghorn.stage.PronghornStage.NONE;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import java.util.HashMap;
 
-public class inputStage extends PronghornStage {
+public class InputStage extends PronghornStage {
 
     private Float[][] data;
     private final Pipe<MessageSchemaDynamic>[] output;
 
-    public static inputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output) {
-        return new inputStage(gm, data, output);
+    public static InputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output) {
+        return new InputStage(gm, data, output);
     }
 
-    public inputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output) {
+    public InputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, NONE, output);
         this.output = output;
         this.data = data;
