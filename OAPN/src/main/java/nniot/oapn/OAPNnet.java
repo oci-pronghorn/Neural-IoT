@@ -66,6 +66,7 @@ public class OAPNnet {
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
         if (isTraining) {
             trainingData = readInData(trainingData, trainingDataFN);
+            preprocessData();
             buildVisualNeuralNet(gm, trainingData, numHiddenLayers, numHiddenNodes);
         } else {
             testingData = readInData(testingData, testDataFN);
@@ -166,6 +167,22 @@ public class OAPNnet {
             }
         }
     }
+        
+    public static void preprocessData() {
+        int numClasses = 0;
+        ArrayList<Float> classes = new ArrayList<>();
+        for (int i = 0; i < trainingData.length; i++) {
+            for (int j = 0; j < trainingData[i].length; j++) {
+                if (!classes.contains(trainingData[i][j])) {
+                    classes.add(trainingData[i][j]);
+                    numClasses++;
+                }
+            }
+        }
+        
+        numOutputNodes = numClasses;
+        numAttributes = trainingData.length;
+    }
 
     //Build OAPN Neural Net sized according to arguments numHiddenLayers and numHiddenNodes
     //This is essentially forward propagation
@@ -181,16 +198,9 @@ public class OAPNnet {
         ArrayList<PronghornStage[]> stages = new ArrayList<>();
         nodesByLayer = new ArrayList<>();
         layers = new Pipe[numHiddenLayers + 2][numHiddenNodes][numHiddenNodes];
-
-        int inputsCount;
-        if (isTraining) {
-            inputsCount = numAttributes + 1;
-        } else {
-            inputsCount = numAttributes;
-        }
-
+        
         //Create initial pipe layer
-        toFirstHiddenLayer = Pipe.buildPipes(inputsCount, config);
+        toFirstHiddenLayer = Pipe.buildPipes(numAttributes, config);
 
         //Create input layer nodes and add them to nodesByLayer ArrayList
         layers[0] = NeuralGraphBuilder.buildPipeLayer(gm, config, toFirstHiddenLayer, numHiddenNodes, factory);
@@ -299,16 +309,10 @@ public class OAPNnet {
      * @return float[]
      */
     public static float initializeWeight() {
-        //float[] arr = new float[length];
-        //for (int i = 0; i < length; i++) {
-        //    arr[i] = (float) Math.random();
-        //}
-        //return arr;
         return (float) Math.random();
     }
 
     public static void initializeWeightsAndBiases() throws FileNotFoundException, IOException {
-        //If we're in training mode, all weights stay at one
         if (isTraining) {
             for (int i = 0; i < nodesByLayer.size(); i++) {
                 for (int j = 0; j < nodesByLayer.get(i).length; j++) {
@@ -455,6 +459,7 @@ public class OAPNnet {
         ArrayList<Float> rp;
         // activations is an array of float[], first being output values of each node in last layer
         //  and then each sigmoid(z) return value appended
+        
         for (VisualNode get : nodesByLayer.get(nodesByLayer.size() - 1)) {
             activation.add(get.getActivation());
         }
@@ -512,6 +517,7 @@ public class OAPNnet {
      * Helper function used in backpropagation() to assign the delta of
      * each node.
      * @param arr
+     * @param desired
      * @return
      */
     public static ArrayList<Float> costDerivative(ArrayList<Float> arr, float desired) {
