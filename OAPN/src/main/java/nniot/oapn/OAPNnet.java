@@ -197,7 +197,7 @@ public class OAPNnet {
         Set<PronghornStage> temp = new HashSet<>();
         ArrayList<PronghornStage[]> stages = new ArrayList<>();
         nodesByLayer = new ArrayList<>();
-        layers = new Pipe[numHiddenLayers + 2][numHiddenNodes][numHiddenNodes];
+        layers = new Pipe[numHiddenLayers + 1][numHiddenNodes][numHiddenNodes];
         
         //Create initial pipe layer
         toFirstHiddenLayer = Pipe.buildPipes(numAttributes, config);
@@ -239,7 +239,6 @@ public class OAPNnet {
         //Add output layer to nodesByLayer
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
-        //System.out.println(currNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
 
         for (int i = 0; i < stages.size(); i++) {
