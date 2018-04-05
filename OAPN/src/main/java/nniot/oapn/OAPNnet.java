@@ -181,7 +181,7 @@ public class OAPNnet {
         }
         
         numOutputNodes = numClasses;
-        numAttributes = trainingData.length;
+        numAttributes = trainingData[0].length - 1;
     }
 
     //Build OAPN Neural Net sized according to arguments numHiddenLayers and numHiddenNodes
@@ -217,13 +217,9 @@ public class OAPNnet {
         for (int i = 1; i < numHiddenLayers; i++) {
             layers[i] = NeuralGraphBuilder.buildPipeLayer(gm, config, layers[i - 1], numHiddenNodes, factory);
             currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
-            //System.out.println(currNodes);
-            //System.out.println(prevNodes);
             temp.addAll(currNodes);
             currNodes.removeAll(prevNodes);
-            //System.out.println(prevNodes);
             stages.add(currNodes.toArray(new PronghornStage[0]));
-            //System.out.println(stages.get(i).length);
             prevNodes.addAll(temp);
         }
         
@@ -233,23 +229,24 @@ public class OAPNnet {
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
+        prevNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        
+        layers[layers.length - 1] = NeuralGraphBuilder.buildPipeLayer(gm, config, fromLastHiddenLayer, 0, factory);
 
         //Create instance of output stage
         //prevNodes.add(outputStage.newInstance(gm, data, fromLastHiddenLayer, ""));
 
         //Add output layer to nodesByLayer
-        //currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
-        //currNodes.removeAll(prevNodes);
+        currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        currNodes.removeAll(prevNodes);
         //System.out.println(currNodes);
-        //stages.add(currNodes.toArray(new PronghornStage[0]));
+        stages.add(currNodes.toArray(new PronghornStage[0]));
 
         for (int i = 0; i < stages.size(); i++) {
             VisualNode nodes[] = new VisualNode[stages.get(i).length];
             for (int j = 0; j < stages.get(i).length; j++) {
                 System.out.println("Stage at " + "(" + i + "," + j + ") = " + stages.get(i)[j].stageId);
-                //System.out.println("Stage info: " + stages.get(i)[j].toString());
                 VisualNode vn = (VisualNode) GraphManager.getStage(gm, stages.get(i)[j].stageId);
-                //System.out.println("VN: " + vn.toString());
                 nodes[j] = vn;
             }
             

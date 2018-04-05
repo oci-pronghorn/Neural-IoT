@@ -19,13 +19,13 @@ public class OutputStage extends PronghornStage {
     }
     
     public OutputStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output) {
-        super(gm, input, output);
+        super(gm, input, NONE);
         this.input = input;
         this.data = null;
     }
 
     public OutputStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output) {
-        super(gm, input, output);
+        super(gm, input, NONE);
         this.input = input;
         this.data = null;
     }
