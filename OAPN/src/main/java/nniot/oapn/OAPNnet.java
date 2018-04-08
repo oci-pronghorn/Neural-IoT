@@ -191,13 +191,12 @@ public class OAPNnet {
         config.hideLabels();
 
         final StageFactory<MessageSchemaDynamic> factory = new VisualStageFactory();
-        final StageFactory<MessageSchemaDynamic> outputFactory = new OutputStageFactory();
         Set<PronghornStage> prevNodes = new HashSet<>();
         Set<PronghornStage> currNodes = new HashSet<>();
         Set<PronghornStage> temp = new HashSet<>();
         ArrayList<PronghornStage[]> stages = new ArrayList<>();
         nodesByLayer = new ArrayList<>();
-        layers = new Pipe[numHiddenLayers + 1][numHiddenNodes][numHiddenNodes];
+        layers = new Pipe[numHiddenLayers + 2][numHiddenNodes][numHiddenNodes];
         
         //Create initial pipe layer
         toFirstHiddenLayer = Pipe.buildPipes(numAttributes, config);
@@ -214,7 +213,7 @@ public class OAPNnet {
         prevNodes.add(InputStage.newInstance(gm, data, toFirstHiddenLayer));
 
         //Create as many hidden layers as are specified by argument, add each layer to the stages array
-        for (int i = 1; i < numHiddenLayers; i++) {
+        for (int i = 1; i < numHiddenLayers + 1; i++) {
             layers[i] = NeuralGraphBuilder.buildPipeLayer(gm, config, layers[i - 1], numHiddenNodes, factory);
             currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
             temp.addAll(currNodes);
@@ -224,17 +223,26 @@ public class OAPNnet {
         }
         
         //Create final hidden pipe layer
-        fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, layers[numHiddenLayers - 1], factory);
+        //fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, layers[numHiddenLayers - 1], factory);
         
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
         prevNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         
-        layers[layers.length - 1] = NeuralGraphBuilder.buildPipeLayer(gm, config, fromLastHiddenLayer, 0, factory);
+        //Create layer of output nodes
+        layers[layers.length - 1] = NeuralGraphBuilder.buildPipeLayer(gm, config, layers[numHiddenLayers], numOutputNodes, factory);
+        
+        currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        currNodes.removeAll(prevNodes);
+        stages.add(currNodes.toArray(new PronghornStage[0]));
+        prevNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        
+        //layers[layers.length - 1] = NeuralGraphBuilder.buildPipeLayer(gm, config, fromLastHiddenLayer, 0, factory);
+        fromLastHiddenLayer = Pipe.buildPipes(numOutputNodes, config);
 
-        //Create instance of output stage
-        //prevNodes.add(outputStage.newInstance(gm, data, fromLastHiddenLayer, ""));
+        //Create data consumer layer
+        prevNodes.add(OutputStage.newInstance(gm, data, fromLastHiddenLayer, ""));
 
         //Add output layer to nodesByLayer
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
