@@ -62,6 +62,7 @@ public class OAPNnet {
         interpretCommandLineOptions(args);
 
         GraphManager gm = new GraphManager();
+        GraphManager.combineCommonEdges=false;
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
         if (isTraining) {
             trainingData = readInData(trainingData, trainingDataFN);
