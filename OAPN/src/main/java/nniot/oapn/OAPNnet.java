@@ -81,6 +81,9 @@ public class OAPNnet {
             System.out.println("Finished generating epochs...");
             //Create array containing each epoch's examples' outputs and the desired outputs
             //updateWeights() takes float[]
+            gm.enableTelemetry(8089);
+            StageScheduler.defaultScheduler(gm).startup();
+
             for (int i = 0; i < epochsSet.length; i++) {
                 for (int j = 0; j < epochsSet[i].length; j++) {
                     updateWeights(epochsSet[i], 0.5f);
