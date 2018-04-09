@@ -488,7 +488,7 @@ public class OAPNnet {
         ArrayList<ArrayList<Float>> activations = new ArrayList();
         ArrayList<ArrayList<Float>> layerWeights = new ArrayList();
         ArrayList<ArrayList<Float>> newBiases = new ArrayList();
-        ArrayList<ArrayList<Float>> newWeights = new ArrayList();
+        ArrayList<ArrayList<Float>> newWeights = new ArrayList(); // TODO: set size of weights array equal to number of all weights in net
         ArrayList<Float> activation = new ArrayList();
         ArrayList<Float> delta;
         ArrayList<Float> rp;
@@ -497,6 +497,9 @@ public class OAPNnet {
         // activations is an array of floats, first being output values of each node in last layer
         //  and then each sigmoid(z) return value appended to that
 
+        initializeEmptyArrayMatrix(zArrays, numHiddenNodes * numHiddenLayers + numOutputNodes, numHiddenNodes);
+        initializeEmptyArrayMatrix(newBiases, numHiddenLayers, numHiddenNodes);
+        
         // For each output value, add that value to the activation array
         float[] outputs = ((OutputStage) nodesByLayer.get(nodesByLayer.size() - 1)[0]).getAllOutputStageActivations();
         for (int i = 0; i < outputs.length; i++) {
@@ -525,7 +528,7 @@ public class OAPNnet {
                     }
 
                     // Add the z array to the matrix of zArrays, and find the ReLu'd activation and add it to the activations matrix
-                    zArrays.add(z);
+                    zArrays.add(nodes[j].stageId, z);
                     activation = ReLuArray(z);
                     activations.add(activation);
                 }
@@ -539,7 +542,7 @@ public class OAPNnet {
         newBiases.add(delta);
 
         // Add new weights for output layer equal to dot product of delta matrix and transposed activations matrix
-        newWeights.add(dot(delta, activations.get(activations.size() - 2))); //activations(size - 2) needs to be transposed (?)
+        newWeights.add(newWeights.size() - 1, dot(delta, activations.get(activations.size() - 2))); //activations(size - 2) needs to be transposed (?)
 
         // TODO: fix matrix math; layerWeights is an nxn matrix and delta is a 1xn matrix, cannot be dot producted
         for (int i = 0; i < nodesByLayer.size(); i++) {
@@ -567,12 +570,22 @@ public class OAPNnet {
 
         return new Object[]{newWeights, newBiases};
     }
-
-    /*
     
-    Helper function used in backpropogation to transpose activations array
+    private static void initializeEmptyArrayList(ArrayList<Float> arr, int capacity) {
+        for (int i = 0; i < capacity; i++)
+            arr.add(0.0f);
+    }
+    
+    private static void initializeEmptyArrayMatrix(ArrayList<ArrayList<Float>> mat, int outerSize, int innerSize) {
+        for (int i = 0; i < outerSize; i++)
+            for (int j = 0; j < innerSize; j++)
+                mat.get(i).set(j, 0.0f);
+    }
+
+    /**
+     * Helper function used in backpropogation to transpose activations array
      */
-    private ArrayList<ArrayList<Float>> tranpose(ArrayList<ArrayList<Float>> arr) {
+    private static ArrayList<ArrayList<Float>> tranpose(ArrayList<ArrayList<Float>> arr) {
         ArrayList<ArrayList<Float>> transposed = new ArrayList(arr);
 
         for (int i = 0; i < arr.size(); i++) {
@@ -601,7 +614,6 @@ public class OAPNnet {
     }
 
     /**
-     *
      * Calls ReLu() for each element in array passed.
      *
      * @param arr is an ArrayList of floats
