@@ -2,6 +2,7 @@ package nniot.oapn;
 
 import com.ociweb.pronghorn.pipe.MessageSchemaDynamic;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import static com.ociweb.pronghorn.stage.PronghornStage.NONE;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -101,6 +102,23 @@ public class OutputStage extends PronghornStage {
 
         }
     }
+    /*
+    Find the max activation values of the pipes coming into this stage in order
+    to determine what class the NN thinks this example is.
+    */
+    private float getMaxActivation(){
+        float maxActivation = 0.0f;
+        for(int i = 0; i < input.length; i++){
+            float curr = SchemalessPipe.readFloat(input[i]);
+      
+            if(curr > maxActivation) {
+                maxActivation = curr;
+            }
+        }
+      
+        return maxActivation;
+    }
+
 
     private String getCorrelatedOutput(Float s[]) {
         // ask dr mayer and mr tippy
