@@ -44,12 +44,12 @@ public class OAPNnet {
     static Pipe<MessageSchemaDynamic>[] toFirstHiddenLayer;
     static Pipe<MessageSchemaDynamic>[][][] layers;
     static Pipe<MessageSchemaDynamic>[] fromLastHiddenLayer;
-    static ArrayList<VisualNode[]> nodesByLayer;
+    static ArrayList<PronghornStage[]> nodesByLayer;
 
     static int numAttributes = 13;
     static int numTestRecords = 100;
     static int numTrainingRecords = 50;
-    static int numHiddenLayers = 2; // default = 2
+    static int numHiddenLayers = 4; // default = 2
     static int numHiddenNodes = 4; // default = 4
     static int numOutputNodes = 3;
 
@@ -57,9 +57,8 @@ public class OAPNnet {
         trainingData = new Float[numTrainingRecords][numAttributes + 1];
         testingData = new Float[numTestRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
-        
-        //System.out.println("Directory: " + System.getProperty("user.dir"));
 
+        //System.out.println("Directory: " + System.getProperty("user.dir"));
         interpretCommandLineOptions(args);
 
         GraphManager gm = new GraphManager();
@@ -68,32 +67,43 @@ public class OAPNnet {
             trainingData = readInData(trainingData, trainingDataFN);
             preprocessData();
             buildVisualNeuralNet(gm, trainingData, numHiddenLayers, numHiddenNodes);
+
+            try {
+                initializeWeightsAndBiases();
+            } catch (FileNotFoundException e) {
+                System.out.println("File " + e.toString() + " not found.");
+            } catch (IOException e) {
+                System.out.println("File " + e.toString() + "is inaccessible.");
+            }
+
+            System.out.println("Generating epochs...");
+            generateEpochs(trainingData);
+            System.out.println("Finished generating epochs...");
+            //Create array containing each epoch's examples' outputs and the desired outputs
+            //updateWeights() takes float[]
+            for (int i = 0; i < epochsSet.length; i++) {
+                for (int j = 0; j < epochsSet[i].length; j++) {
+                    updateWeights(epochsSet[i], 0.5f);
+                }
+            }
+
         } else {
             testingData = readInData(testingData, testDataFN);
             buildVisualNeuralNet(gm, testingData, numHiddenLayers, numHiddenNodes);
+
+            try {
+                initializeWeightsAndBiases();
+            } catch (FileNotFoundException e) {
+                System.out.println("File " + e.toString() + " not found.");
+            } catch (IOException e) {
+                System.out.println("File " + e.toString() + "is inaccessible.");
+            }
+
+            // TODO: Logic for testing new data sets goes here
         }
 
         gm.enableTelemetry(8089);
-
         StageScheduler.defaultScheduler(gm).startup();
-
-        try {
-            initializeWeightsAndBiases();
-        } catch (FileNotFoundException e) {
-            System.out.println("File " + e.toString() + " not found.");
-        } catch (IOException e) {
-            System.out.println("File " + e.toString() + "is inaccessible.");
-        }
-
-        System.out.println("Generating epochs...");
-        generateEpochs(trainingData);
-        //Create array containing each epoch's examples' outputs and the desired outputs
-        //updateWeights() takes float[]
-        for (int i = 0; i < epochsSet.length; i++) {
-            for (int j = 0; j < epochsSet[i].length; j++) {
-                updateWeights(epochsSet[i], 0.5f);
-            }
-        }
     }
 
     public static void interpretCommandLineOptions(String[] args) {
@@ -167,19 +177,17 @@ public class OAPNnet {
             }
         }
     }
-        
+
     public static void preprocessData() {
         int numClasses = 0;
         ArrayList<Float> classes = new ArrayList<>();
         for (int i = 0; i < trainingData.length; i++) {
-            for (int j = 0; j < trainingData[i].length; j++) {
-                if (!classes.contains(trainingData[i][j])) {
-                    classes.add(trainingData[i][j]);
-                    numClasses++;
-                }
+            if (!classes.contains(trainingData[i][0])) {
+                classes.add(trainingData[i][0]);
+                numClasses++;
             }
         }
-        
+
         numOutputNodes = numClasses;
         numAttributes = trainingData[0].length - 1;
     }
@@ -188,32 +196,40 @@ public class OAPNnet {
     //This is essentially forward propagation
     public static void buildVisualNeuralNet(GraphManager gm, Float[][] data, int numHiddenLayers, int numHiddenNodes) throws FileNotFoundException {
         final SchemalessFixedFieldPipeConfig config = new SchemalessFixedFieldPipeConfig(32);
-        config.hideLabels();
-
         final StageFactory<MessageSchemaDynamic> factory = new VisualStageFactory();
         Set<PronghornStage> prevNodes = new HashSet<>();
         Set<PronghornStage> currNodes = new HashSet<>();
         Set<PronghornStage> temp = new HashSet<>();
         ArrayList<PronghornStage[]> stages = new ArrayList<>();
+        //toFirstHiddenLayer = new Pipe[numAttributes][numHiddenNodes];
         nodesByLayer = new ArrayList<>();
         layers = new Pipe[numHiddenLayers + 2][numHiddenNodes][numHiddenNodes];
-        
-        //Create initial pipe layer
-        toFirstHiddenLayer = Pipe.buildPipes(numAttributes, config);
 
-        //Create input layer nodes and add them to nodesByLayer ArrayList
-        layers[0] = NeuralGraphBuilder.buildPipeLayer(gm, config, toFirstHiddenLayer, numHiddenNodes, factory);
+        config.hideLabels();
+
+        // Returns array of Pipe objects to be used in building input layer
+        toFirstHiddenLayer = Pipe.buildPipes(numHiddenNodes, config);
+
+        //Create data input stage, and add to allNodes so it is not counted as a data-holding stage
+        InputStage input = InputStage.newInstance(gm, data, toFirstHiddenLayer);
+        //prevNodes.add(input);
+
+//        Pipe[][] inputPipes = new Pipe[input.getOutput().length][0];
+//        layers[0] = inputPipes;
+        currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        currNodes.removeAll(prevNodes);
+        stages.add(currNodes.toArray(new PronghornStage[0]));
+        prevNodes.addAll(currNodes);
+
+        layers[1] = NeuralGraphBuilder.buildPipeLayer(gm, config, toFirstHiddenLayer, numHiddenNodes, factory);
 
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        currNodes.removeAll(prevNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
-        
-        prevNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
-        
-        //Create data input stage, and add to allNodes so it is not counted as a data-holding stage
-        prevNodes.add(InputStage.newInstance(gm, data, toFirstHiddenLayer));
+        prevNodes.addAll(currNodes);
 
         //Create as many hidden layers as are specified by argument, add each layer to the stages array
-        for (int i = 1; i < numHiddenLayers + 1; i++) {
+        for (int i = 2; i < numHiddenLayers; i++) {
             layers[i] = NeuralGraphBuilder.buildPipeLayer(gm, config, layers[i - 1], numHiddenNodes, factory);
             currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
             temp.addAll(currNodes);
@@ -221,44 +237,51 @@ public class OAPNnet {
             stages.add(currNodes.toArray(new PronghornStage[0]));
             prevNodes.addAll(temp);
         }
-        
-        //Create final hidden pipe layer
-        //fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, layers[numHiddenLayers - 1], factory);
-        
-        currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
-        currNodes.removeAll(prevNodes);
-        stages.add(currNodes.toArray(new PronghornStage[0]));
-        prevNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
-        
-        //Create layer of output nodes
-        layers[layers.length - 1] = NeuralGraphBuilder.buildPipeLayer(gm, config, layers[numHiddenLayers], numOutputNodes, factory);
-        
-        currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
-        currNodes.removeAll(prevNodes);
-        stages.add(currNodes.toArray(new PronghornStage[0]));
-        prevNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
-        
-        //layers[layers.length - 1] = NeuralGraphBuilder.buildPipeLayer(gm, config, fromLastHiddenLayer, 0, factory);
-        fromLastHiddenLayer = Pipe.buildPipes(numOutputNodes, config);
 
+        layers[numHiddenLayers] = NeuralGraphBuilder.buildPipeLayer(gm, config, layers[numHiddenLayers - 1], numOutputNodes, factory);
+
+        currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        currNodes.removeAll(prevNodes);
+        stages.add(currNodes.toArray(new PronghornStage[0]));
+        prevNodes.addAll(currNodes);
+
+        fromLastHiddenLayer = NeuralGraphBuilder.lastPipeLayer(gm, layers[numHiddenLayers], factory);
+
+        currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
+        currNodes.removeAll(prevNodes);
+        stages.add(currNodes.toArray(new PronghornStage[0]));
+        prevNodes.addAll(currNodes);
+
+//        Pipe[][] outputPipes = new Pipe[fromLastHiddenLayer.length][0];
+//        layers[3] = outputPipes;
         //Create data consumer layer
-        prevNodes.add(OutputStage.newInstance(gm, data, fromLastHiddenLayer, ""));
+        OutputStage.newInstance(gm, data, fromLastHiddenLayer, "");
 
-        //Add output layer to nodesByLayer
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
+        prevNodes.addAll(currNodes);
 
         for (int i = 0; i < stages.size(); i++) {
-            VisualNode nodes[] = new VisualNode[stages.get(i).length];
-            for (int j = 0; j < stages.get(i).length; j++) {
-                System.out.println("Stage at " + "(" + i + "," + j + ") = " + stages.get(i)[j].stageId);
-                VisualNode vn = (VisualNode) GraphManager.getStage(gm, stages.get(i)[j].stageId);
-                nodes[j] = vn;
-            }
-            
-            if (nodes != null) {
-                nodesByLayer.add(i, nodes);
+            if (stages.get(i).length > 0) {
+                PronghornStage nodes[];
+                if (i == 0) {
+                    nodes = new InputStage[stages.get(i).length];
+                } else if (i == stages.size() - 1) {
+                    nodes = new OutputStage[stages.get(i).length];
+                } else {
+                    nodes = new VisualNode[stages.get(i).length];
+                }
+
+                for (int j = 0; j < stages.get(i).length; j++) {
+                    System.out.println("Stage at " + "(" + i + "," + j + ") = " + stages.get(i)[j].stageId);
+                    PronghornStage stage = (PronghornStage) GraphManager.getStage(gm, stages.get(i)[j].stageId);
+                    nodes[j] = stage;
+                }
+
+                if (nodes != null) {
+                    nodesByLayer.add(nodes);
+                }
             }
         }
     }
@@ -290,17 +313,19 @@ public class OAPNnet {
         int epochSize = (int) Math.ceil(inputData.length / 10.0f);
         int numEpochs = (int) Math.ceil(inputData.length / epochSize);
         epochsSet = new Float[numEpochs][epochSize][numAttributes + 1];
-        int[] epochIndices = new int[numEpochs];
+        int[] epochSizeCounter = new int[numEpochs];
+        int epochSetIndex;
 
         for (Float[] row : inputData) {
-            int epochSetIndex = -1;
-
-            while (epochSetIndex < 0 || epochsSet[epochSetIndex][epochIndices[epochSetIndex]].length > epochSize) {
+            do {
                 epochSetIndex = (int) Math.floor(Math.random() * numEpochs);
-            }
+                if (epochSizeCounter[epochSetIndex] < epochSize) {
+                    epochsSet[epochSetIndex][epochSizeCounter[epochSetIndex]] = row;
+                    epochSizeCounter[epochSetIndex] = epochSizeCounter[epochSetIndex] + 1;
+                    row = null;
+                }
 
-            epochsSet[epochSetIndex][epochIndices[epochSetIndex]] = row;
-            epochIndices[epochSetIndex] = epochIndices[epochSetIndex] + 1;
+            } while (row != null);
         }
 
         return epochsSet;
@@ -318,27 +343,31 @@ public class OAPNnet {
 
     public static void initializeWeightsAndBiases() throws FileNotFoundException, IOException {
         if (isTraining) {
+            System.out.println("Initializing weights and biases...");
             for (int i = 0; i < nodesByLayer.size(); i++) {
                 for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                    VisualNode node = nodesByLayer.get(i)[j];
-                    for (int k = 0; k < node.input.length; k++) {
-                        float weight = initializeWeight();
-                        node.setWeight(k, weight);
+                    if (!(i == 0) && !(i == nodesByLayer.size() - 1)) {
+                        VisualNode node = (VisualNode) nodesByLayer.get(i)[j];
+                        for (int k = 0; k < node.input.length; k++) {
+                            float weight = initializeWeight();
+                            node.setWeight(k, weight);
+                        }
+                        node.setBias(new Float(0.0));
                     }
-                    node.setBias(new Float(0.0));
                 }
             }
         } else {
+            System.out.println("Loading weights and biases from files...");
             BufferedReader weightBR = new BufferedReader(new FileReader(weightsInputFN));
             BufferedReader biasBR = new BufferedReader(new FileReader(biasesInputFN));
             String line;
-            
+
             //Traverse array of nodes by layer, if the key from the file matches the current node,
             //place that weight from file into a temporary array, which then goes into the correct node
             for (int i = 0; i < nodesByLayer.size(); i++) {
                 for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                    float weightsForCurrNode[] = new float[nodesByLayer.get(i)[j].getWeights().length];
-                    for (int k = 0; k < nodesByLayer.get(i)[j].getWeights().length; k++) {
+                    float weightsForCurrNode[] = new float[((VisualNode) nodesByLayer.get(i)[j]).getWeights().length];
+                    for (int k = 0; k < ((VisualNode) nodesByLayer.get(i)[j]).getWeights().length; k++) {
                         if ((line = weightBR.readLine()) != null) {
                             String key = line.split(" ")[0];
                             Float v = new Float(line.split(" ")[1].replace("\n", ""));
@@ -348,24 +377,24 @@ public class OAPNnet {
                             }
                         }
                     }
-                    nodesByLayer.get(i)[j].setWeights(weightsForCurrNode);
+                    ((VisualNode) nodesByLayer.get(i)[j]).setWeights(weightsForCurrNode);
                 }
             }
-            
+
             //Traverse array of nodes by layer, if the key from the file matches the current node,
             //place that bias from file into the correct node
             for (int i = 0; i < nodesByLayer.size(); i++) {
                 for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                    float biasForCurrNode =  0.0f;
-                        if ((line = weightBR.readLine()) != null) {
-                            String key = line.split(" ")[0];
-                            Float v = new Float(line.split(" ")[1].replace("\n", ""));
+                    float biasForCurrNode = 0.0f;
+                    if ((line = weightBR.readLine()) != null) {
+                        String key = line.split(" ")[0];
+                        Float v = new Float(line.split(" ")[1].replace("\n", ""));
 
-                            if (nodesByLayer.get(i)[j].toString().equals(key)) {
-                                biasForCurrNode = v;
-                            }
+                        if (nodesByLayer.get(i)[j].toString().equals(key)) {
+                            biasForCurrNode = v;
                         }
-                    nodesByLayer.get(i)[j].setBias(biasForCurrNode);
+                    }
+                    ((VisualNode) nodesByLayer.get(i)[j]).setBias(biasForCurrNode);
                 }
             }
             weightBR.close();
@@ -391,10 +420,10 @@ public class OAPNnet {
         for (int i = 0; i < nodesByLayer.size(); i++) {
             for (int j = 0; j < nodesByLayer.get(i).length; j++) {
                 String key = nodesByLayer.get(i)[j].toString();
-                for (int k = 0; k < nodesByLayer.get(i)[j].getWeights().length; k++) {
-                    weightsBW.write(key + " " + nodesByLayer.get(i)[j].getWeights()[k] + "\n");
+                for (int k = 0; k < ((VisualNode) nodesByLayer.get(i)[j]).getWeights().length; k++) {
+                    weightsBW.write(key + " " + ((VisualNode) nodesByLayer.get(i)[j]).getWeights()[k] + "\n");
                 }
-                biasesBW.write(key + " " + nodesByLayer.get(i)[j].getBias() + "\n");
+                biasesBW.write(key + " " + ((VisualNode) nodesByLayer.get(i)[j]).getBias() + "\n");
             }
         }
 
@@ -423,20 +452,20 @@ public class OAPNnet {
             }
             for (int j = 0; j < nodesByLayer.size(); j++) {
                 for (int k = 0; k < nodesByLayer.get(j).length; k++) {
-                    for (int l = 0; l < nodesByLayer.get(j)[k].getWeightsLength(); l++) {
-                        currWeight = nodesByLayer.get(j)[k].getWeight(l);
+                    for (int l = 0; l < ((VisualNode) nodesByLayer.get(j)[k]).getWeightsLength(); l++) {
+                        currWeight = ((VisualNode) nodesByLayer.get(j)[k]).getWeight(l);
                         newWeights.get(k).set(l, currWeight + weightDeltas.get(k).get(l));
                     }
-                    
+
                     float[] weights = new float[newWeights.get(k).size()];
-                    currBias = nodesByLayer.get(j)[k].getBias();
-                    
+                    currBias = ((VisualNode) nodesByLayer.get(j)[k]).getBias();
+
                     for (int l = 0; l < weights.length; l++) {
                         weights[l] = (float) newWeights.get(k).get(l);
                     }
-                    
-                    nodesByLayer.get(j)[k].setWeights(weights);
-                    nodesByLayer.get(j)[k].setBias(currBias + biasDeltas.get(j).get(k));
+
+                    ((VisualNode) nodesByLayer.get(j)[k]).setWeights(weights);
+                    ((VisualNode) nodesByLayer.get(j)[k]).setBias(currBias + biasDeltas.get(j).get(k));
                 }
             }
         }
@@ -450,10 +479,8 @@ public class OAPNnet {
      * @param desired
      * @return
      */
-    public static Object[] backpropagation(float desired) {       
-        float a, b; // Z is a number that holds the weighted activation, e.g. z = (a * w) + b
-        float[] w;
-        ArrayList<ArrayList<Float>> zArray = new ArrayList(); // Holds all Z values
+    public static Object[] backpropagation(float desired) {
+        ArrayList<ArrayList<Float>> zArrays = new ArrayList(); // Holds all Z values
         ArrayList<ArrayList<Float>> activations = new ArrayList();
         ArrayList<ArrayList<Float>> layerWeights = new ArrayList();
         ArrayList<ArrayList<Float>> newBiases = new ArrayList();
@@ -461,51 +488,71 @@ public class OAPNnet {
         ArrayList<Float> activation = new ArrayList();
         ArrayList<Float> delta;
         ArrayList<Float> rp;
-        // activations is an array of float[], first being output values of each node in last layer
-        //  and then each sigmoid(z) return value appended
-        
-        for (VisualNode get : nodesByLayer.get(nodesByLayer.size() - 1)) {
-            activation.add(get.getActivation());
+        float a, b; // Z is a number that holds the weighted activation, e.g. z = (a * w) + b
+        float[] w;
+        // activations is an array of floats, first being output values of each node in last layer
+        //  and then each sigmoid(z) return value appended to that
+
+        // For each output value, add that value to the activation array
+        float[] outputs = ((OutputStage) nodesByLayer.get(nodesByLayer.size() - 1)[0]).getAllOutputStageActivations();
+        for (int i = 0; i < outputs.length; i++) {
+            activation.add(outputs[i]);
         }
+
+        // Add the activations array to activations matrix
         activations.add(activation);
-        
+
+        // For each layer, create an array of VisualNodes and z array
         for (int i = 0; i < nodesByLayer.size(); i++) {
-            VisualNode[] nodes = nodesByLayer.get(i);
-            ArrayList<Float> z;
-            
-            for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                a = nodes[j].getActivation();
-                w = nodes[j].getWeights();
-                b = nodes[j].getBias();
-                z = new ArrayList();
-                for (int k = 0; k < w.length; k++) {
-                    z.add(a * w[k] + b);
+            if (!(i == 0) && !(i == nodesByLayer.size() - 1)) {
+                PronghornStage[] nodes = nodesByLayer.get(i);
+                ArrayList<Float> z;
+
+                // For each node in that layer, get that node's activation, weights, and bias
+                for (int j = 0; j < nodes.length; j++) {
+                    a = ((VisualNode) nodes[j]).getActivation();
+                    w = ((VisualNode) nodes[j]).getWeights();
+                    b = ((VisualNode) nodes[j]).getBias();
+                    z = new ArrayList();
+
+                    // For each weight, find the weighted activation and append it to the z array
+                    for (int k = 0; k < w.length; k++) {
+                        z.add(a * w[k] + b);
+                    }
+
+                    // Add the z array to the matrix of zArrays, and find the ReLu'd activation and add it to the activations matrix
+                    zArrays.add(z);
+                    activation = ReLuArray(z);
+                    activations.add(activation);
                 }
-                
-                zArray.add(z);
-                activation = ReLuArray(z);
-                activations.add(activation);
             }
         }
-        
-        delta = dot(costDerivative(activations.get(activations.size() - 1), desired), derivativeReLuArray(zArray.get(zArray.size() - 1)));
+
+        // Find the delta of the cost derivative
+        delta = dot(costDerivative(activations.get(activations.size() - 1), desired), derivativeReLuArray(zArrays.get(zArrays.size() - 1)));
+
+        // Add new biases for output layer equal to delta
         newBiases.add(delta);
+
+        // Add new weights for output layer equal to dot product of delta matrix and transposed activations matrix
         newWeights.add(dot(delta, activations.get(activations.size() - 2))); //activations(size - 2) needs to be transposed (?)
-        
+
         // TODO: fix matrix math; layerWeights is an nxn matrix and delta is a 1xn matrix, cannot be dot producted
         for (int i = 0; i < nodesByLayer.size(); i++) {
-            ArrayList<Float> nodeWeights = new ArrayList();
-            for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                float arr[] = nodesByLayer.get(i)[j].getWeights();
-                for (int k = 0; k < arr.length; k++) {
-                    nodeWeights.add(arr[k]);
+            if (!(i == 0) && !(i == nodesByLayer.size() - 1)) {
+                ArrayList<Float> nodeWeights = new ArrayList();
+                for (int j = 0; j < nodesByLayer.get(i).length; j++) {
+                    float arr[] = ((VisualNode) nodesByLayer.get(i)[j]).getWeights();
+                    for (int k = 0; k < arr.length; k++) {
+                        nodeWeights.add(arr[k]);
+                    }
                 }
+                layerWeights.add(nodeWeights);
             }
-            layerWeights.add(nodeWeights);
         }
-        
+
         for (int i = nodesByLayer.size() - 1; i > 0; i--) {
-            ArrayList<Float> z = zArray.get(i);
+            ArrayList<Float> z = zArrays.get(i);
             rp = derivativeReLuArray(z);
             for (int j = 0; j < layerWeights.size(); j++) {
                 delta = dot(dot(layerWeights.get(j + 1), delta), rp);
@@ -518,8 +565,9 @@ public class OAPNnet {
     }
 
     /**
-     * Helper function used in backpropagation() to assign the delta of
-     * each node.
+     * Helper function used in backpropagation() to assign the delta of each
+     * node.
+     *
      * @param arr
      * @param desired
      * @return
@@ -533,8 +581,9 @@ public class OAPNnet {
     }
 
     /**
-
+     *
      * Calls ReLu() for each element in array passed.
+     *
      * @param arr is an ArrayList of floats
      * @return ArrayList of floats
      */
@@ -545,13 +594,13 @@ public class OAPNnet {
         }
         return retArr;
     }
-    
+
     public static float ReLu(float i) {
         // Secondary option for rectifier function
         // return (float) Math.log(1 + Math.exp(i))
         return Math.max(0, i);
     }
-    
+
     public static ArrayList<Float> derivativeReLuArray(ArrayList<Float> arr) {
         ArrayList<Float> retArr = new ArrayList();
         for (float i : arr) {
@@ -559,7 +608,7 @@ public class OAPNnet {
         }
         return retArr;
     }
-       
+
     public static float derivativeReLu(float sum) {
         if (sum > 0) {
             return 1.0f;
@@ -567,10 +616,11 @@ public class OAPNnet {
             return 0.0f;
         }
     }
-    
+
     public static ArrayList<Float> dot(ArrayList<Float> a, ArrayList<Float> b) {
-        if (a.size() != b.size())
+        if (a.size() != b.size()) {
             System.out.println("Dot product attempted between ArrayLists of different lengths.");
+        }
         ArrayList<Float> retArr = new ArrayList();
         for (int i = 0; i < a.size(); i++) {
             retArr.add(i, a.get(i) * b.get(i));

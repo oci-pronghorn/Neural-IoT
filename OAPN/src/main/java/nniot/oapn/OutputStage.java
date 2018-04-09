@@ -34,10 +34,10 @@ public class OutputStage extends PronghornStage {
         this.data = data;
     }
     
-    public static OutputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output, String fname) throws FileNotFoundException {
+    public static OutputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException {
         OutputStage outputS = null;
         try {
-            outputS = new OutputStage(gm, data, output, fname);
+            outputS = new OutputStage(gm, data, input, fname);
         } catch (IOException ex) {
             Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -46,13 +46,13 @@ public class OutputStage extends PronghornStage {
 
     @Override
     public void run() {
-        try {
-            writeOutput();
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-        }
+//        try {
+//            writeOutput();
+//        } catch (FileNotFoundException ex) {
+//            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+//        } catch (IOException ex) {
+//            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+//        }
 
     }
 
@@ -65,42 +65,42 @@ public class OutputStage extends PronghornStage {
      return result;
      }*/
     public void writeOutput() throws FileNotFoundException, IOException {
-        for (Float[] row : data) {
-            String s = "";
-            for (Float item : row) {
-                s += item.toString();
-                s += ", ";
-            }
-            s += getCorrelatedOutput(row);
-            s += "\n";
-            outputFileWriter.write(s);
-        }
-        outputFileWriter.close();
-        if (OAPNnet.isTraining) {
-            BufferedWriter out = new BufferedWriter(new FileWriter(weightsFile, false));
-            for (int i = 0; i < OAPNnet.nodesByLayer.size(); i++) {
-                for (int j = 0; j < OAPNnet.nodesByLayer.get(i).length; j++) {
-                    VisualNode node = OAPNnet.nodesByLayer.get(i)[j];
-                    out.write(node.stageId);
-                    for (int k = 0; k < node.input.length; k++) {
-                        out.write(" " + node.input[k].toString() + "," + node.getWeight(k) + " ");
-                    }
-                    out.write("\n");
-                }
-            }
-
-            out.close();
-            out = new BufferedWriter(new FileWriter(biasesFile, false));
-            for (int i = 0; i < OAPNnet.nodesByLayer.size(); i++) {
-                for (int j = 0; j < OAPNnet.nodesByLayer.get(i).length; j++) {
-                    VisualNode node = OAPNnet.nodesByLayer.get(i)[j];
-                    out.write(node.stageId + " " + node.getBias() + "\n");
-                }
-            }
-
-            out.close();
-
-        }
+//        for (Float[] row : data) {
+//            String s = "";
+//            for (Float item : row) {
+//                s += item.toString();
+//                s += ", ";
+//            }
+//            //s += getCorrelatedOutput(row);
+//            s += "\n";
+//            outputFileWriter.write(s);
+//        }
+//        outputFileWriter.close();
+//        if (OAPNnet.isTraining) {
+//            BufferedWriter out = new BufferedWriter(new FileWriter(weightsFile, false));
+//            for (int i = 0; i < OAPNnet.nodesByLayer.size(); i++) {
+//                for (int j = 0; j < OAPNnet.nodesByLayer.get(i).length; j++) {
+//                    VisualNode node = OAPNnet.nodesByLayer.get(i)[j];
+//                    out.write(node.stageId);
+//                    for (int k = 0; k < node.input.length; k++) {
+//                        out.write(" " + node.input[k].toString() + "," + node.getWeight(k) + " ");
+//                    }
+//                    out.write("\n");
+//                }
+//            }
+//
+//            out.close();
+//            out = new BufferedWriter(new FileWriter(biasesFile, false));
+//            for (int i = 0; i < OAPNnet.nodesByLayer.size(); i++) {
+//                for (int j = 0; j < OAPNnet.nodesByLayer.get(i).length; j++) {
+//                    VisualNode node = OAPNnet.nodesByLayer.get(i)[j];
+//                    out.write(node.stageId + " " + node.getBias() + "\n");
+//                }
+//            }
+//
+//            out.close();
+//
+//        }
     }
     /*
     Find the max activation values of the pipes coming into this stage in order
@@ -125,17 +125,31 @@ public class OutputStage extends PronghornStage {
     public float[] getAllOutputStageActivations(){
         float[] activations = new float[input.length];
         
-        for(int i = 0; i < input.length; i++) {
-            activations[i] = SchemalessPipe.readFloat(input[i]);
+        //for(int i = 0; i < input.length; i++) {
+        int counter = 0;
+        
+        while (availCount() > 0) {
+            activations[counter] = SchemalessPipe.readFloat(input[counter]);
+            SchemalessPipe.releaseReads(input[counter]);
+            counter++;
         }
         
         return activations;
     }
+    
+    private int availCount() {
+        int avail = messagesToConsume();
+        return avail;
+    }
+    
+    private int messagesToConsume() {
 
-
-    private String getCorrelatedOutput(Float s[]) {
-        // ask dr mayer and mr tippy
-        //TODO: WHICH INPUT ROW GOES WITH WHICH OUTOUT, HASH EACH INPUT LINBE AND USE SINGLETON HASHMAP
-        return null;
+        int results = Integer.MAX_VALUE;
+        int i = input.length;
+        assert (i > 0);
+        while (--i >= 0) {
+            results = Math.min(results, SchemalessPipe.contentRemaining(input[i]));
+        }
+        return results;
     }
 }
