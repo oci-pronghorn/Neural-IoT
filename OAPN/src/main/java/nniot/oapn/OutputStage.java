@@ -108,8 +108,10 @@ public class OutputStage extends PronghornStage {
     */
     private float getMaxActivation(){
         float maxActivation = 0.0f;
-        for(int i = 0; i < input.length; i++){
-            float curr = SchemalessPipe.readFloat(input[i]);
+        int counter = 0;
+        
+        while(availCount() > 0){
+            float curr = SchemalessPipe.readFloat(input[counter]);
       
             if(curr > maxActivation) {
                 maxActivation = curr;

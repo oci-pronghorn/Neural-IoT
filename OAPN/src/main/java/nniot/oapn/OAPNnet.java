@@ -567,6 +567,22 @@ public class OAPNnet {
         return new Object[]{newWeights, newBiases};
     }
 
+    /*
+    
+    Helper function used in backpropogation to transpose activations array
+     */
+    private ArrayList<ArrayList<Float>> tranpose(ArrayList<ArrayList<Float>> arr) {
+        ArrayList<ArrayList<Float>> transposed = new ArrayList(arr);
+
+        for (int i = 0; i < arr.size(); i++) {
+            for (int j = 0; j < arr.get(i).size(); j++) {
+                transposed.get(j).set(i, arr.get(i).get(j));
+            }
+        }
+
+        return transposed;
+    }
+
     /**
      * Helper function used in backpropagation() to assign the delta of each
      * node.
