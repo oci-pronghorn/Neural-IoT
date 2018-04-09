@@ -118,6 +118,19 @@ public class OutputStage extends PronghornStage {
       
         return maxActivation;
     }
+    
+    /*
+    Return an array of all activations that are coming into outputStage.
+    */
+    public float[] getAllOutputStageActivations(){
+        float[] activations = new float[input.length];
+        
+        for(int i = 0; i < input.length; i++) {
+            activations[i] = SchemalessPipe.readFloat(input[i]);
+        }
+        
+        return activations;
+    }
 
 
     private String getCorrelatedOutput(Float s[]) {
