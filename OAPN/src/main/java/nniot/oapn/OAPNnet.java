@@ -216,10 +216,7 @@ public class OAPNnet {
 
         //Create data input stage, and add to allNodes so it is not counted as a data-holding stage
         InputStage input = InputStage.newInstance(gm, data, toFirstHiddenLayer);
-        //prevNodes.add(input);
 
-//        Pipe[][] inputPipes = new Pipe[input.getOutput().length][0];
-//        layers[0] = inputPipes;
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
@@ -543,7 +540,7 @@ public class OAPNnet {
 
         // Add new weights for output layer equal to dot product of delta matrix and transposed activations matrix
         newWeights.add(newWeights.size() - 1, dot(delta, activations.get(activations.size() - 2))); //activations(size - 2) needs to be transposed (?)
-
+        
         // TODO: fix matrix math; layerWeights is an nxn matrix and delta is a 1xn matrix, cannot be dot producted
         for (int i = 0; i < nodesByLayer.size(); i++) {
             if (!(i == 0) && !(i == nodesByLayer.size() - 1)) {
