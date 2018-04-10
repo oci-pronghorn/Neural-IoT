@@ -18,22 +18,28 @@ public class OutputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] input;
 
-    private BufferedWriter outputFileWriter;
-    private File weightsFile;
-    private File biasesFile;
+    private static BufferedWriter outputFileWriter;
+    //private File weightsFile;
+    //private File biasesFile;
 
     private final Float[][] data;
+
+    public static void closeOutputFileWriter() throws IOException {
+        outputFileWriter.close();
+    }
 
     public OutputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException, IOException {
         super(gm, input, NONE);
         this.input = input;
+        if (outputFileWriter == null) {
+            outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")), false));
 
-        this.outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")), false));
-        weightsFile = new File(fname.concat("OUTPUT-weights"));
-        biasesFile = new File(fname.concat("OUTPUT-biases"));
+        }
+        //weightsFile = new File(fname.concat("OUTPUT-weights"));
+        // biasesFile = new File(fname.concat("OUTPUT-biases"));
         this.data = data;
     }
-    
+
     public static OutputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException {
         OutputStage outputS = null;
         try {
@@ -102,48 +108,49 @@ public class OutputStage extends PronghornStage {
 //
 //        }
     }
+
     /*
     Find the max activation values of the pipes coming into this stage in order
     to determine what class the NN thinks this example is.
-    */
-    private float getMaxActivation(){
+     */
+    private float getMaxActivation() {
         float maxActivation = 0.0f;
         int counter = 0;
-        
-        while(availCount() > 0){
+
+        while (availCount() > 0) {
             float curr = SchemalessPipe.readFloat(input[counter]);
-      
-            if(curr > maxActivation) {
+
+            if (curr > maxActivation) {
                 maxActivation = curr;
             }
         }
-      
+
         return maxActivation;
     }
-    
+
     /*
     Return an array of all activations that are coming into outputStage.
-    */
-    public float[] getAllOutputStageActivations(){
+     */
+    public float[] getAllOutputStageActivations() {
         float[] activations = new float[input.length];
-        
+
         //for(int i = 0; i < input.length; i++) {
         int counter = 0;
-        
+
         while (availCount() > 0) {
             activations[counter] = SchemalessPipe.readFloat(input[counter]);
             SchemalessPipe.releaseReads(input[counter]);
             counter++;
         }
-        
+
         return activations;
     }
-    
+
     private int availCount() {
         int avail = messagesToConsume();
         return avail;
     }
-    
+
     private int messagesToConsume() {
 
         int results = Integer.MAX_VALUE;
@@ -152,6 +159,7 @@ public class OutputStage extends PronghornStage {
         while (--i >= 0) {
             results = Math.min(results, SchemalessPipe.contentRemaining(input[i]));
         }
+
         return results;
     }
 }
