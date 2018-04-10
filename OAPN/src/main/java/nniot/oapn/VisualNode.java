@@ -12,7 +12,7 @@ public class VisualNode extends PronghornStage {
     public final Pipe<MessageSchemaDynamic>[] output;
     private float bias;
     private float[] weights;
-    private float result; //activation value
+    private float weightedSum; //activation value
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
@@ -57,9 +57,9 @@ public class VisualNode extends PronghornStage {
 
             //send this value to all the down stream nodes
             int j = output.length;
-            this.result = ReLu(sum);
+            this.weightedSum = ReLu(sum);
             while (--j >= 0) {
-                SchemalessPipe.writeFloat(output[j], this.result);
+                SchemalessPipe.writeFloat(output[j], this.weightedSum);
                 SchemalessPipe.publishWrites(output[j]);
             }
         }
@@ -115,7 +115,7 @@ public class VisualNode extends PronghornStage {
     }
     
         public float getActivation() {
-        return result;
+        return weightedSum;
     }
     
     public float getBias() {
