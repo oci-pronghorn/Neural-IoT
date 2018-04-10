@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 public class OutputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] input;
-
+    private int curDataExample;
     private static BufferedWriter outputFileWriter;
     //private File weightsFile;
     //private File biasesFile;
@@ -30,6 +30,7 @@ public class OutputStage extends PronghornStage {
 
     public OutputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException, IOException {
         super(gm, input, NONE);
+        curDataExample = 0;
         this.input = input;
         if (outputFileWriter == null) {
             outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")), false));
@@ -52,13 +53,13 @@ public class OutputStage extends PronghornStage {
 
     @Override
     public void run() {
-//        try {
-//            writeOutput();
-//        } catch (FileNotFoundException ex) {
-//            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-//        } catch (IOException ex) {
-//            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-//        }
+        try {
+            writeOutput();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
     }
 
@@ -71,42 +72,16 @@ public class OutputStage extends PronghornStage {
      return result;
      }*/
     public void writeOutput() throws FileNotFoundException, IOException {
-//        for (Float[] row : data) {
-//            String s = "";
-//            for (Float item : row) {
-//                s += item.toString();
-//                s += ", ";
-//            }
-//            //s += getCorrelatedOutput(row);
-//            s += "\n";
-//            outputFileWriter.write(s);
-//        }
-//        outputFileWriter.close();
-//        if (OAPNnet.isTraining) {
-//            BufferedWriter out = new BufferedWriter(new FileWriter(weightsFile, false));
-//            for (int i = 0; i < OAPNnet.nodesByLayer.size(); i++) {
-//                for (int j = 0; j < OAPNnet.nodesByLayer.get(i).length; j++) {
-//                    VisualNode node = OAPNnet.nodesByLayer.get(i)[j];
-//                    out.write(node.stageId);
-//                    for (int k = 0; k < node.input.length; k++) {
-//                        out.write(" " + node.input[k].toString() + "," + node.getWeight(k) + " ");
-//                    }
-//                    out.write("\n");
-//                }
-//            }
-//
-//            out.close();
-//            out = new BufferedWriter(new FileWriter(biasesFile, false));
-//            for (int i = 0; i < OAPNnet.nodesByLayer.size(); i++) {
-//                for (int j = 0; j < OAPNnet.nodesByLayer.get(i).length; j++) {
-//                    VisualNode node = OAPNnet.nodesByLayer.get(i)[j];
-//                    out.write(node.stageId + " " + node.getBias() + "\n");
-//                }
-//            }
-//
-//            out.close();
-//
-//        }
+        String curOutputLabel = translateToCorrectLabel(getMaxActivation());
+        String op = "";
+        for (int i = 0; i < data[curDataExample].length; i++) {
+            op += data[curDataExample][i] + " ";
+        }
+        op += curOutputLabel;
+        outputFileWriter.write(op);
+        outputFileWriter.flush();
+        curDataExample++;
+
     }
 
     /*
@@ -114,15 +89,17 @@ public class OutputStage extends PronghornStage {
     to determine what class the NN thinks this example is.
      */
     private float getMaxActivation() {
-        float maxActivation = 0.0f;
-        int counter = 0;
+        float maxActivation = Float.MIN_VALUE;
 
-        while (availCount() > 0) {
-            float curr = SchemalessPipe.readFloat(input[counter]);
+        while (availCount() == OAPNnet.numOutputNodes) {
+            for (int i = 0; i < OAPNnet.numOutputNodes; i++) {
+                float curr = SchemalessPipe.readFloat(input[i]);
 
-            if (curr > maxActivation) {
-                maxActivation = curr;
+                if (curr > maxActivation) {
+                    maxActivation = curr;
+                }
             }
+
         }
 
         return maxActivation;
@@ -161,5 +138,9 @@ public class OutputStage extends PronghornStage {
         }
 
         return results;
+    }
+
+    private String translateToCorrectLabel(float maxActivation) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }
