@@ -22,13 +22,13 @@ public class OutputStage extends PronghornStage {
     //private File weightsFile;
     //private File biasesFile;
 
-    private final Float[][] data;
+    private final Float[] data;
 
     public static void closeOutputFileWriter() throws IOException {
         outputFileWriter.close();
     }
 
-    public OutputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException, IOException {
+    public OutputStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException, IOException {
         super(gm, input, NONE);
         curDataExample = 0;
         this.input = input;
@@ -38,13 +38,13 @@ public class OutputStage extends PronghornStage {
         }
         //weightsFile = new File(fname.concat("OUTPUT-weights"));
         // biasesFile = new File(fname.concat("OUTPUT-biases"));
-        this.data = data;
+        this.data = null;
     }
 
-    public static OutputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException {
+    public static OutputStage newInstance(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, String fname) throws FileNotFoundException {
         OutputStage outputS = null;
         try {
-            outputS = new OutputStage(gm, data, input, fname);
+            outputS = new OutputStage(gm, input, fname);
         } catch (IOException ex) {
             Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -53,12 +53,14 @@ public class OutputStage extends PronghornStage {
 
     @Override
     public void run() {
-        try {
-            writeOutput();
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+        if (!(data == null)) {
+            try {
+                writeOutput();
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
     }
@@ -74,8 +76,8 @@ public class OutputStage extends PronghornStage {
     public void writeOutput() throws FileNotFoundException, IOException {
         String curOutputLabel = translateToCorrectLabel(getMaxActivation());
         String op = "";
-        for (int i = 0; i < data[curDataExample].length; i++) {
-            op += data[curDataExample][i] + " ";
+        for (int i = 0; i < data.length; i++) {
+            op += data[i] + " ";
         }
         op += curOutputLabel;
         outputFileWriter.write(op);

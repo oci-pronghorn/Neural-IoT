@@ -9,29 +9,31 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class InputStage extends PronghornStage {
 
-    private Float[][] data;
+    private float data;
     private final Pipe<MessageSchemaDynamic>[] output;
 
-    public static InputStage newInstance(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output) {
-        return new InputStage(gm, data, output);
+    public static InputStage newInstance(GraphManager gm, Pipe<MessageSchemaDynamic>[] output) {
+        return new InputStage(gm, output);
     }
 
-    public InputStage(GraphManager gm, Float[][] data, Pipe<MessageSchemaDynamic>[] output) {
+    public InputStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, NONE, output);
         this.output = output;
-        this.data = data;
+        this.data = Float.NaN;
     }
 
     //Hands floats out to pipes below it
     public void run() {
-        int c = 0, j = 0;
-        while (c > 0 || ((c = roomForWrite()) > 0)) {
-            c -= 1;
+        if (!(this.data == Float.NaN))  {
+            int c = 0;
+            while (c > 0 || ((c = roomForWrite()) > 0)) {
+                c -= 1;
 
-            int i = output.length;
-            while (--i >= 0) {
-                SchemalessPipe.writeFloat(output[i], data[i][j]);
-                SchemalessPipe.publishWrites(output[i]);
+                int i = output.length;
+                while (--i >= 0) {
+                    SchemalessPipe.writeFloat(output[i], data);
+                    SchemalessPipe.publishWrites(output[i]);
+                }
             }
         }
     }
@@ -43,5 +45,9 @@ public class InputStage extends PronghornStage {
             result = Math.min(result, SchemalessPipe.roomRemaining(output[i]));
         }
         return result;
+    }
+
+    public void giveInputData(float data) {
+        this.data = data;
     }
 }

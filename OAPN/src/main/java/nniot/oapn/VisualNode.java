@@ -12,14 +12,15 @@ public class VisualNode extends PronghornStage {
     public final Pipe<MessageSchemaDynamic>[] output;
     private float bias;
     private float[] weights;
-    private float weightedSum; //activation value
+    private float activation; // activation value
+    private float weightedSum; //weighted sum passed to next node
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
         this.input = new Pipe[]{input};
         this.output = output;
         this.bias = 0;
-        this.weights = new float[] { 0.0f };
+        this.weights = new float[]{0.0f};
     }
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output) {
@@ -46,13 +47,12 @@ public class VisualNode extends PronghornStage {
     @Override
     public void run() {
         while (availCount() > 0) {
-
             float sum = 0;
             int i = input.length;
             while (--i >= 0) {
-                float value = SchemalessPipe.readFloat(input[i]);
+                this.activation = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
-                sum += (value * weights[i]) + bias;
+                sum += (this.activation * weights[i]) + bias;
             }
 
             //send this value to all the down stream nodes
@@ -66,7 +66,8 @@ public class VisualNode extends PronghornStage {
     }
 
     /**
-     * Used to reduce the weighted sum calculated in run().
+     * Used to rectify the weighted sum calculated in run().
+     *
      * @param sum
      * @return
      */
@@ -74,14 +75,6 @@ public class VisualNode extends PronghornStage {
         // Secondary option for rectifier function
         // return (float) Math.log(1 + Math.exp(sum))
         return Math.max(0, sum);
-    }
-
-    public float derivativeReLu(float sum) {
-        if (sum > 0) {
-            return 1.0f;
-        } else {
-            return 0.0f;
-        }
     }
 
     private int availCount() {
@@ -113,31 +106,35 @@ public class VisualNode extends PronghornStage {
         }
         return results;
     }
-    
-        public float getActivation() {
-        return weightedSum;
+
+    public float getActivation() {
+        return this.activation;
     }
-    
+
     public float getBias() {
-        return bias;
+        return this.bias;
     }
-    
+
     public float[] getWeights() {
-        return weights;
+        return this.weights;
     }
-    
+
     public float getWeight(int index) {
         return this.weights[index];
     }
-    
+
     public int getWeightsLength() {
-        return weights.length;
+        return this.weights.length;
     }
-    
+
+    public float getWeightedSum() {
+        return this.weightedSum;
+    }
+
     public void setBias(float bias) {
         this.bias = bias;
     }
-    
+
     public void setWeights(float[] weights) {
         if (this.weights.length == weights.length) {
             for (int i = 0; i < weights.length; i++) {
@@ -145,7 +142,7 @@ public class VisualNode extends PronghornStage {
             }
         }
     }
-    
+
     public void setWeight(int index, float weight) {
         this.weights[index] = weight;
     }
