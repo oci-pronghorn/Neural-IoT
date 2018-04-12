@@ -48,6 +48,7 @@ public class OAPNnet {
     static Pipe<MessageSchemaDynamic>[] fromLastHiddenLayer;
     static ArrayList<PronghornStage[]> nodesByLayer;
     static InputStage input;
+    static OutputStage output;
 
     static int numAttributes = 13;
     static int numTestRecords = 100;
@@ -87,11 +88,8 @@ public class OAPNnet {
             //updateWeights() takes float[]
 
             for (int i = 0; i < epochsSet.length; i++) {
-                for (int j = 0; j < epochsSet[i].length; j++) {
-                    printNeuralNet();
-                    updateWeights(epochsSet[i], 0.5f);
-                    //printNeuralNet();
-                }
+                //printNeuralNet();
+                updateWeights(epochsSet[i], 0.5f);
             }
 
             gm.enableTelemetry(8089);
@@ -260,7 +258,7 @@ public class OAPNnet {
         prevNodes.addAll(currNodes);
 
         //Create data consumer layer
-        OutputStage.newInstance(gm, fromLastHiddenLayer, "");
+        output = OutputStage.newInstance(gm, fromLastHiddenLayer, "");
 
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
@@ -334,16 +332,6 @@ public class OAPNnet {
         }
 
         return epochsSet;
-    }
-
-    /**
-     * Initialize weights randomly for the neural net; values will be greater
-     * than or equal to 0.00 and less than or equal to 1.0.
-     *
-     * @return float[]
-     */
-    public static float initializeWeight() {
-        return (float) Math.random();
     }
 
     public static void initializeWeightsAndBiases() throws FileNotFoundException, IOException {
@@ -430,21 +418,27 @@ public class OAPNnet {
      * @param learningRate
      */
     public static void updateWeights(Float[][] epoch, float learningRate) {
-        //ArrayList<ArrayList<Float>> newWeights = new ArrayList();
-        Map<Integer, ArrayList<Float>> newWeights = new HashMap();
-        Map<Integer, Float> newBiases = new HashMap();
+        Map<Integer, ArrayList<Float>> newWeights;
+        Map<Integer, Float> newBiases;
+        float[] exampleData;
         for (int i = 0; i < epoch.length; i++) {
-            for (int j = 0; j < epoch[i].length; j++) {
-                Object arrays[] = backpropagation(epoch[i][0]);
-                newWeights = (HashMap<Integer, ArrayList<Float>>) arrays[0];
-                newBiases = (HashMap<Integer, Float>) arrays[1];
+            exampleData = new float[epoch[i].length];
+            for (int j = 1; j < epoch[i].length; j++) {
+                exampleData[j] = epoch[i][j];
             }
+            input.giveInputData(exampleData);
+            while(output.getMaxActivation() == Float.MIN_VALUE) {
+                ;
+            }
+            Object arrays[] = backpropagation(epoch[i][0]);
+            newWeights = (HashMap<Integer, ArrayList<Float>>) arrays[0];
+            newBiases = (HashMap<Integer, Float>) arrays[1];
             for (int j = 2; j < nodesByLayer.size(); j++) {
                 if (j != nodesByLayer.size() - 1) {
                     for (int k = 0; k < nodesByLayer.get(j).length; k++) {
                         VisualNode node = (VisualNode) nodesByLayer.get(j)[k];
                         for (int l = 0; l < node.getWeightsLength(); l++) {
-                            node.setWeight(l, node.getWeight(l) - (learningRate 
+                            node.setWeight(l, node.getWeight(l) - (learningRate
                                     / epoch[i].length) * newWeights.get(node.stageId).get(l));
                         }
 
@@ -486,7 +480,7 @@ public class OAPNnet {
         for (int i = 0; i < nodes.length; i++) {
             costDerivative.add(((VisualNode) nodes[i]).getActivation() - desired);
         }
-        
+
         nodes = nodesByLayer.get(nodesByLayer.size() - 3);
         for (int i = 0; i < nodes.length; i++) {
             layerActivations.add(((VisualNode) nodes[i]).getActivation());
@@ -533,7 +527,6 @@ public class OAPNnet {
 
             nodes = nodesByLayer.get(i);
             for (int j = 0; j < nodes.length; j++) {
-//                layerActivations.add(((VisualNode) nodes[j]).getActivation());
                 zArray.add(((VisualNode) nodes[j]).getWeightedSum());
             }
 

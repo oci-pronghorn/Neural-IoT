@@ -24,7 +24,7 @@ public class InputStage extends PronghornStage {
 
     //Hands floats out to pipes below it
     public void run() {
-        if (!(this.data == null))  {
+        if (this.data != null)  {
             int c = 0;
             while (c > 0 || ((c = roomForWrite()) > 0)) {
                 c -= 1;

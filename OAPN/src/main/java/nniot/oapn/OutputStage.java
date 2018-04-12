@@ -90,13 +90,14 @@ public class OutputStage extends PronghornStage {
     Find the max activation values of the pipes coming into this stage in order
     to determine what class the NN thinks this example is.
      */
-    private float getMaxActivation() {
+    public float getMaxActivation() {
         float maxActivation = Float.MIN_VALUE;
 
         while (availCount() == OAPNnet.numOutputNodes) {
             for (int i = 0; i < OAPNnet.numOutputNodes; i++) {
                 float curr = SchemalessPipe.readFloat(input[i]);
-
+                SchemalessPipe.releaseReads(input[i]);
+                
                 if (curr > maxActivation) {
                     maxActivation = curr;
                 }

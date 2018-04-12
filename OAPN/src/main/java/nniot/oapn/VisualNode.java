@@ -8,8 +8,8 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class VisualNode extends PronghornStage {
 
-    public final Pipe<MessageSchemaDynamic>[] input;
-    public final Pipe<MessageSchemaDynamic>[] output;
+    private final Pipe<MessageSchemaDynamic>[] input;
+    private final Pipe<MessageSchemaDynamic>[] output;
     private float bias;
     private float[] weights;
     private float activation; // activation value
