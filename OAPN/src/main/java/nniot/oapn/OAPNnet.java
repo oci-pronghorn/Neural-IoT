@@ -18,6 +18,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * @author Nick Kirkpatrick
@@ -49,7 +52,7 @@ public class OAPNnet {
     static int numAttributes = 13;
     static int numTestRecords = 100;
     static int numTrainingRecords = 50;
-    static int numHiddenLayers = 4; // default = 2
+    static int numHiddenLayers = 2; // default = 2
     static int numHiddenNodes = 4; // default = 4
     static int numOutputNodes = 3;
 
@@ -62,12 +65,12 @@ public class OAPNnet {
         interpretCommandLineOptions(args);
 
         GraphManager gm = new GraphManager();
-        GraphManager.combineCommonEdges=false;
+        GraphManager.combineCommonEdges = false;
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
         if (isTraining) {
             trainingData = readInData(trainingData, trainingDataFN);
             preprocessData();
-            buildVisualNeuralNet(gm, trainingData, numHiddenLayers, numHiddenNodes);
+            buildVisualNeuralNet(gm, numHiddenLayers, numHiddenNodes);
 
             try {
                 initializeWeightsAndBiases();
@@ -82,18 +85,21 @@ public class OAPNnet {
             System.out.println("Finished generating epochs...");
             //Create array containing each epoch's examples' outputs and the desired outputs
             //updateWeights() takes float[]
-            gm.enableTelemetry(8089);
-            StageScheduler.defaultScheduler(gm).startup();
 
             for (int i = 0; i < epochsSet.length; i++) {
                 for (int j = 0; j < epochsSet[i].length; j++) {
+                    printNeuralNet();
                     updateWeights(epochsSet[i], 0.5f);
+                    //printNeuralNet();
                 }
             }
 
+            gm.enableTelemetry(8089);
+            StageScheduler.defaultScheduler(gm).startup();
+
         } else {
             testingData = readInData(testingData, testDataFN);
-            buildVisualNeuralNet(gm, testingData, numHiddenLayers, numHiddenNodes);
+            //buildVisualNeuralNet(gm, testingData, numHiddenLayers, numHiddenNodes);
 
             try {
                 initializeWeightsAndBiases();
@@ -166,7 +172,7 @@ public class OAPNnet {
                     System.out.println("-t\t\tSpecify name of file containing "
                             + "training/testing data.");
                     System.out.println("-win\t\tSpecify name of file to store "
-                            + "weights after training. Defaults to "
+                            + "weights if already trained. Defaults to "
                             + "./weights_input.txt.");
                     System.out.println("-wout\t\tSpecify name of file to store "
                             + "weights after training. Defaults to "
@@ -198,7 +204,7 @@ public class OAPNnet {
 
     //Build OAPN Neural Net sized according to arguments numHiddenLayers and numHiddenNodes
     //This is essentially forward propagation
-    public static void buildVisualNeuralNet(GraphManager gm, Float[][] data, int numHiddenLayers, int numHiddenNodes) throws FileNotFoundException {
+    public static void buildVisualNeuralNet(GraphManager gm, int numHiddenLayers, int numHiddenNodes) throws FileNotFoundException {
         final SchemalessFixedFieldPipeConfig config = new SchemalessFixedFieldPipeConfig(32);
         final StageFactory<MessageSchemaDynamic> factory = new VisualStageFactory();
         Set<PronghornStage> prevNodes = new HashSet<>();
@@ -215,7 +221,10 @@ public class OAPNnet {
         toFirstHiddenLayer = Pipe.buildPipes(numHiddenNodes, config);
 
         //Create data input stage, and add to allNodes so it is not counted as a data-holding stage
-        InputStage input = InputStage.newInstance(gm, data, toFirstHiddenLayer);
+        for (int i = 0; i < numAttributes; i++) {
+            InputStage.newInstance(gm, toFirstHiddenLayer);
+        }
+        //InputStage input = InputStage.newInstance(gm, data, toFirstHiddenLayer);
 
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
@@ -253,10 +262,8 @@ public class OAPNnet {
         stages.add(currNodes.toArray(new PronghornStage[0]));
         prevNodes.addAll(currNodes);
 
-//        Pipe[][] outputPipes = new Pipe[fromLastHiddenLayer.length][0];
-//        layers[3] = outputPipes;
         //Create data consumer layer
-        OutputStage.newInstance(gm, data, fromLastHiddenLayer, "");
+        OutputStage.newInstance(gm, fromLastHiddenLayer, "");
 
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
@@ -440,33 +447,25 @@ public class OAPNnet {
      * @param learningRate
      */
     public static void updateWeights(Float[][] epoch, float learningRate) {
-        ArrayList<ArrayList<Float>> newWeights = new ArrayList();
-        ArrayList<ArrayList<Float>> weightDeltas = new ArrayList();
-        ArrayList<ArrayList<Float>> biasDeltas = new ArrayList();
-        float currWeight;
-        float currBias;
+        //ArrayList<ArrayList<Float>> newWeights = new ArrayList();
+        Map<Integer, ArrayList<Float>> newWeights = new HashMap();
+        Map<Integer, Float> newBiases = new HashMap();
         for (int i = 0; i < epoch.length; i++) {
             for (int j = 0; j < epoch[i].length; j++) {
-                Object arrays[] = backpropagation(epoch[j][epoch.length - 1]);
-                weightDeltas = (ArrayList<ArrayList<Float>>) arrays[0];
-                biasDeltas = (ArrayList<ArrayList<Float>>) arrays[1];
+                Object arrays[] = backpropagation(epoch[i][0]);
+                newWeights = (HashMap<Integer, ArrayList<Float>>) arrays[0];
+                newBiases = (HashMap<Integer, Float>) arrays[1];
             }
             for (int j = 0; j < nodesByLayer.size(); j++) {
-                for (int k = 0; k < nodesByLayer.get(j).length; k++) {
-                    for (int l = 0; l < ((VisualNode) nodesByLayer.get(j)[k]).getWeightsLength(); l++) {
-                        currWeight = ((VisualNode) nodesByLayer.get(j)[k]).getWeight(l);
-                        newWeights.get(k).set(l, currWeight + weightDeltas.get(k).get(l));
+                if (!(j == 0) && !(j == nodesByLayer.size() - 1)) {
+                    for (int k = 0; k < nodesByLayer.get(j).length; k++) {
+                        VisualNode node = (VisualNode) nodesByLayer.get(j)[k];
+                        for (int l = 0; l < node.getWeightsLength(); l++) {
+                            node.setWeight(l, node.getWeight(l) - (learningRate / epoch[i].length) * newWeights.get(node.stageId).get(l));
+                        }
+
+                        node.setBias(node.getBias() - (learningRate / epoch[i].length) * newBiases.get(node.stageId));
                     }
-
-                    float[] weights = new float[newWeights.get(k).size()];
-                    currBias = ((VisualNode) nodesByLayer.get(j)[k]).getBias();
-
-                    for (int l = 0; l < weights.length; l++) {
-                        weights[l] = (float) newWeights.get(k).get(l);
-                    }
-
-                    ((VisualNode) nodesByLayer.get(j)[k]).setWeights(weights);
-                    ((VisualNode) nodesByLayer.get(j)[k]).setBias(currBias + biasDeltas.get(j).get(k));
                 }
             }
         }
@@ -481,133 +480,108 @@ public class OAPNnet {
      * @return
      */
     public static Object[] backpropagation(float desired) {
-        ArrayList<ArrayList<Float>> zArrays = new ArrayList(); // Holds all Z values
-        ArrayList<ArrayList<Float>> activations = new ArrayList();
-        ArrayList<ArrayList<Float>> layerWeights = new ArrayList();
-        ArrayList<ArrayList<Float>> newBiases = new ArrayList();
-        ArrayList<ArrayList<Float>> newWeights = new ArrayList(); // TODO: set size of weights array equal to number of all weights in net
-        ArrayList<Float> activation = new ArrayList();
+        Map<Integer, ArrayList<Float>> newWeights = new HashMap();
+        Map<Integer, Float> newBiases = new HashMap();
+        ArrayList<ArrayList<Float>> layerWeightsMatrix;
+        ArrayList<Float> layerWeightsArray;
+        ArrayList<Float> zArray = new ArrayList();
+        ArrayList<Float> layerActivations = new ArrayList();
+        ArrayList<Float> costDerivative = new ArrayList();
         ArrayList<Float> delta;
-        ArrayList<Float> rp;
-        float a, b; // Z is a number that holds the weighted activation, e.g. z = (a * w) + b
+        ArrayList<Float> nodeWeights;
+        float newWeight;
         float[] w;
-        // activations is an array of floats, first being output values of each node in last layer
-        //  and then each sigmoid(z) return value appended to that
 
-        initializeEmptyArrayMatrix(zArrays, numHiddenNodes * numHiddenLayers + numOutputNodes, numHiddenNodes);
-        initializeEmptyArrayMatrix(newBiases, numHiddenLayers, numHiddenNodes);
-        
         // For each output value, add that value to the activation array
         float[] outputs = ((OutputStage) nodesByLayer.get(nodesByLayer.size() - 1)[0]).getAllOutputStageActivations();
         for (int i = 0; i < outputs.length; i++) {
-            activation.add(outputs[i]);
+            zArray.add(outputs[i]);
         }
 
-        // Add the activations array to activations matrix
-        activations.add(activation);
+        PronghornStage[] nodes = nodesByLayer.get(nodesByLayer.size() - 2);
+        for (int i = 0; i < nodes.length; i++) {
+            costDerivative.add(((VisualNode) nodes[i]).getActivation() - desired);
+            layerActivations.add(((VisualNode) nodes[i]).getActivation());
+        }
 
-        // For each layer, create an array of VisualNodes and z array
-        for (int i = 0; i < nodesByLayer.size(); i++) {
-            if (!(i == 0) && !(i == nodesByLayer.size() - 1)) {
-                PronghornStage[] nodes = nodesByLayer.get(i);
-                ArrayList<Float> z;
+        // Delta value for output layer
+        delta = hadamardProduct(costDerivative, ReLuArray(zArray));
+        //newBiases.put(nodesByLayer.size() - 2, delta);
+        //newWeights.put(nodesByLayer.size() - 2, vectMult(delta, layerActivations));
 
-                // For each node in that layer, get that node's activation, weights, and bias
-                for (int j = 0; j < nodes.length; j++) {
-                    a = ((VisualNode) nodes[j]).getActivation();
-                    w = ((VisualNode) nodes[j]).getWeights();
-                    b = ((VisualNode) nodes[j]).getBias();
-                    z = new ArrayList();
+        // Start i at size - 3 because we skip the output stage layer, and the output nodes layer is done above
+        for (int i = nodesByLayer.size() - 3; i > 1; i--) {
+            zArray = new ArrayList();
+            layerActivations = new ArrayList();
+            layerWeightsMatrix = new ArrayList();
 
-                    // For each weight, find the weighted activation and append it to the z array
-                    for (int k = 0; k < w.length; k++) {
-                        z.add(a * w[k] + b);
-                    }
-
-                    // Add the z array to the matrix of zArrays, and find the ReLu'd activation and add it to the activations matrix
-                    zArrays.add(nodes[j].stageId, z);
-                    activation = ReLuArray(z);
-                    activations.add(activation);
-                }
+            // Get the activations from the next layer
+            nodes = nodesByLayer.get(i - 1);
+            for (int j = 0; j < nodes.length; j++) {
+                layerActivations.add(((VisualNode) nodes[j]).getActivation());
             }
-        }
 
-        // Find the delta of the cost derivative
-        delta = dot(costDerivative(activations.get(activations.size() - 1), desired), derivativeReLuArray(zArrays.get(zArrays.size() - 1)));
+            // Get the weights between last layer and current
+            nodes = nodesByLayer.get(i + 1);
+            for (int j = 0; j < nodes.length; j++) {
+                layerWeightsArray = new ArrayList();
 
-        // Add new biases for output layer equal to delta
-        newBiases.add(delta);
-
-        // Add new weights for output layer equal to dot product of delta matrix and transposed activations matrix
-        newWeights.add(newWeights.size() - 1, dot(delta, activations.get(activations.size() - 2))); //activations(size - 2) needs to be transposed (?)
-        
-        // TODO: fix matrix math; layerWeights is an nxn matrix and delta is a 1xn matrix, cannot be dot producted
-        for (int i = 0; i < nodesByLayer.size(); i++) {
-            if (!(i == 0) && !(i == nodesByLayer.size() - 1)) {
-                ArrayList<Float> nodeWeights = new ArrayList();
-                for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                    float arr[] = ((VisualNode) nodesByLayer.get(i)[j]).getWeights();
-                    for (int k = 0; k < arr.length; k++) {
-                        nodeWeights.add(arr[k]);
-                    }
+                w = ((VisualNode) nodes[j]).getWeights();
+                for (int k = 0; k < w.length; k++) {
+                    layerWeightsArray.add(w[k]);
                 }
-                layerWeights.add(nodeWeights);
+                layerWeightsMatrix.add(layerWeightsArray);
             }
-        }
 
-        for (int i = nodesByLayer.size() - 1; i > 0; i--) {
-            ArrayList<Float> z = zArrays.get(i);
-            rp = derivativeReLuArray(z);
-            for (int j = 0; j < layerWeights.size(); j++) {
-                delta = dot(dot(layerWeights.get(j + 1), delta), rp);
-                newBiases.add(delta);
-                newWeights.add(dot(delta, activations.get(j - 1)));
+            nodes = nodesByLayer.get(i);
+            for (int j = 0; j < nodes.length; j++) {
+                zArray.add(((VisualNode) nodes[j]).getWeightedSum());
+            }
+
+            // Delta value for i-th layer
+            delta = hadamardProduct(matMult(transpose(layerWeightsMatrix), delta), ReLuArray(zArray));
+
+            for (int j = 0; j < delta.size(); j++) {
+                nodeWeights = new ArrayList();
+                for (int k = 0; k < layerActivations.size(); k++) {
+                    newWeight = delta.get(j) * layerActivations.get(k);
+                    nodeWeights.add(newWeight);
+                }
+                newBiases.put(nodesByLayer.get(i)[j].stageId, delta.get(j));
+                newWeights.put(nodesByLayer.get(i)[j].stageId, nodeWeights);
             }
         }
 
         return new Object[]{newWeights, newBiases};
     }
-    
-    private static void initializeEmptyArrayList(ArrayList<Float> arr, int capacity) {
-        for (int i = 0; i < capacity; i++)
-            arr.add(0.0f);
-    }
-    
-    private static void initializeEmptyArrayMatrix(ArrayList<ArrayList<Float>> mat, int outerSize, int innerSize) {
-        for (int i = 0; i < outerSize; i++)
-            for (int j = 0; j < innerSize; j++)
-                mat.get(i).set(j, 0.0f);
-    }
 
     /**
      * Helper function used in backpropogation to transpose activations array
      */
-    private static ArrayList<ArrayList<Float>> tranpose(ArrayList<ArrayList<Float>> arr) {
-        ArrayList<ArrayList<Float>> transposed = new ArrayList(arr);
+    private static ArrayList<ArrayList<Float>> transpose(ArrayList<ArrayList<Float>> arr) {
+        ArrayList<ArrayList<Float>> transposed;
 
-        for (int i = 0; i < arr.size(); i++) {
-            for (int j = 0; j < arr.get(i).size(); j++) {
-                transposed.get(j).set(i, arr.get(i).get(j));
+        if (arr.get(0).size() == arr.size()) {
+            transposed = new ArrayList(arr);
+            for (int i = 0; i < arr.size(); i++) {
+                for (int j = 0; j < arr.get(i).size(); j++) {
+                    transposed.get(j).add(i, arr.get(i).get(j));
+                }
+            }
+        } else {
+            transposed = new ArrayList(arr.get(0).size());
+            for (int i = 0; i < arr.get(0).size(); i++) {
+                transposed.add(i, new ArrayList(arr.size()));
+            }
+
+            for (int i = 0; i < arr.size(); i++) {
+                for (int j = 0; j < arr.get(i).size(); j++) {
+                    transposed.get(j).add(i, arr.get(i).get(j));
+                }
             }
         }
 
         return transposed;
-    }
-
-    /**
-     * Helper function used in backpropagation() to assign the delta of each
-     * node.
-     *
-     * @param arr
-     * @param desired
-     * @return
-     */
-    public static ArrayList<Float> costDerivative(ArrayList<Float> arr, float desired) {
-        ArrayList<Float> retArr = new ArrayList();
-        for (float i : arr) {
-            retArr.add(i - desired);
-        }
-        return retArr;
     }
 
     /**
@@ -646,14 +620,109 @@ public class OAPNnet {
         }
     }
 
-    public static ArrayList<Float> dot(ArrayList<Float> a, ArrayList<Float> b) {
+    public static float dot(ArrayList<Float> a, ArrayList<Float> b) {
         if (a.size() != b.size()) {
             System.out.println("Dot product attempted between ArrayLists of different lengths.");
         }
-        ArrayList<Float> retArr = new ArrayList();
+        float retVal = 0.0f;
+
         for (int i = 0; i < a.size(); i++) {
-            retArr.add(i, a.get(i) * b.get(i));
+            retVal += a.get(i) * b.get(i);
+        }
+
+        return retVal;
+    }
+
+    public static ArrayList<Float> matMult(ArrayList<ArrayList<Float>> arr1, ArrayList<Float> arr2) {
+        if (arr1.get(0).size() != arr2.size()) {
+            System.out.println("Attempted to multiply incompatible matrices.");
+            return null;
+        }
+
+        ArrayList<Float> retArr = new ArrayList();
+        float element = 0.0f;
+
+        for (int i = 0; i < arr1.size(); i++) {
+            for (int j = 0; j < arr1.get(i).size(); j++) {
+                element += arr1.get(i).get(j) * arr2.get(j);
+            }
+            retArr.add(element);
         }
         return retArr;
+    }
+
+    public static ArrayList<Float> vectMult(ArrayList<Float> arr1, ArrayList<Float> arr2) {
+        if (arr1.size() != arr2.size()) {
+            System.out.println("Attempted to multiply incompatible vectors.");
+            return null;
+        }
+
+        ArrayList<Float> retArr = new ArrayList();
+        for (int i = 0; i < arr1.size(); i++) {
+            retArr.add(arr1.get(i) * arr2.get(i));
+        }
+        return retArr;
+    }
+
+    public static ArrayList<Float> vectAdd(ArrayList<Float> arr1, ArrayList<Float> arr2) {
+        if (arr1.size() != arr2.size()) {
+            System.out.println("Attempted to add incompatible vectors.");
+            return null;
+        }
+
+        ArrayList<Float> retArr = new ArrayList();
+
+        for (int i = 0; i < arr1.size(); i++) {
+            retArr.add(arr1.get(i) + arr2.get(i));
+        }
+        return retArr;
+    }
+
+    public static ArrayList<Float> hadamardProduct(ArrayList<Float> arr1, ArrayList<Float> arr2) {
+        if (arr1.size() != arr2.size()) {
+            System.out.println("Attempted to calculate Hadamard Product of incompatible matrices.");
+            return null;
+        }
+
+        ArrayList<Float> retArr = new ArrayList();
+        for (int i = 0; i < arr1.size(); i++) {
+            retArr.add(arr1.get(i) * arr2.get(i));
+        }
+        return retArr;
+    }
+
+    public static float[] listToArray(ArrayList<Float> arr) {
+        float[] retArr = new float[arr.size()];
+        for (int i = 0; i < arr.size(); i++) {
+            retArr[i] = arr.get(i);
+        }
+        return retArr;
+    }
+
+    public static ArrayList<String> printNeuralNet() {
+        ArrayList<String> strings = new ArrayList();
+        String s = "";
+        for (int i = 0; i < nodesByLayer.size(); i++) {
+            for (int j = 0; j < nodesByLayer.get(i).length; j++) {
+                PronghornStage stage = nodesByLayer.get(i)[j];
+                s += "(" + stage.stageId + ":";
+
+                if (i == 0) {
+                    s += " InputStage)";
+                } else if (i == nodesByLayer.size() - 1) {
+                    s += " OutputStage)";
+                } else {
+                    VisualNode node = (VisualNode) stage;
+                    for (int k = 0; k < node.getWeightsLength(); k++) {
+                        s += " VisualNode w" + k + "=" + node.getWeight(k);
+                    }
+                    s += " b=" + node.getBias() + ")";
+                }
+                strings.add(s);
+            }
+        }
+
+        System.out.println(strings);
+        return strings;
     }
 }
