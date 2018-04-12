@@ -9,7 +9,7 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class InputStage extends PronghornStage {
 
-    private float data;
+    private float[] data;
     private final Pipe<MessageSchemaDynamic>[] output;
 
     public static InputStage newInstance(GraphManager gm, Pipe<MessageSchemaDynamic>[] output) {
@@ -19,19 +19,19 @@ public class InputStage extends PronghornStage {
     public InputStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, NONE, output);
         this.output = output;
-        this.data = Float.NaN;
+        this.data = null;
     }
 
     //Hands floats out to pipes below it
     public void run() {
-        if (!(this.data == Float.NaN))  {
+        if (!(this.data == null))  {
             int c = 0;
             while (c > 0 || ((c = roomForWrite()) > 0)) {
                 c -= 1;
 
                 int i = output.length;
                 while (--i >= 0) {
-                    SchemalessPipe.writeFloat(output[i], data);
+                    SchemalessPipe.writeFloat(output[i], data[i]);
                     SchemalessPipe.publishWrites(output[i]);
                 }
             }
@@ -47,7 +47,7 @@ public class InputStage extends PronghornStage {
         return result;
     }
 
-    public void giveInputData(float data) {
+    public void giveInputData(float[] data) {
         this.data = data;
     }
 }

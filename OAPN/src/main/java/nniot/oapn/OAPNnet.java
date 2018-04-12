@@ -20,7 +20,6 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Iterator;
 
 /**
  * @author Nick Kirkpatrick
@@ -48,6 +47,7 @@ public class OAPNnet {
     static Pipe<MessageSchemaDynamic>[][][] layers;
     static Pipe<MessageSchemaDynamic>[] fromLastHiddenLayer;
     static ArrayList<PronghornStage[]> nodesByLayer;
+    static InputStage input;
 
     static int numAttributes = 13;
     static int numTestRecords = 100;
@@ -218,20 +218,17 @@ public class OAPNnet {
         config.hideLabels();
 
         // Returns array of Pipe objects to be used in building input layer
-        toFirstHiddenLayer = Pipe.buildPipes(numHiddenNodes, config);
+        toFirstHiddenLayer = Pipe.buildPipes(numAttributes, config);
 
-        //Create data input stage, and add to allNodes so it is not counted as a data-holding stage
-        for (int i = 0; i < numAttributes; i++) {
-            InputStage.newInstance(gm, toFirstHiddenLayer);
-        }
-        //InputStage input = InputStage.newInstance(gm, data, toFirstHiddenLayer);
+        //Create input stage that splits data into its attributes and passes it to first VisualNode layer
+        input = InputStage.newInstance(gm, toFirstHiddenLayer);
 
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
         stages.add(currNodes.toArray(new PronghornStage[0]));
         prevNodes.addAll(currNodes);
 
-        layers[1] = NeuralGraphBuilder.buildPipeLayer(gm, config, toFirstHiddenLayer, numHiddenNodes, factory);
+        layers[0] = NeuralGraphBuilder.buildPipeLayer(gm, config, toFirstHiddenLayer, numHiddenNodes, factory);
 
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
@@ -239,7 +236,7 @@ public class OAPNnet {
         prevNodes.addAll(currNodes);
 
         //Create as many hidden layers as are specified by argument, add each layer to the stages array
-        for (int i = 2; i < numHiddenLayers; i++) {
+        for (int i = 1; i < numHiddenLayers; i++) {
             layers[i] = NeuralGraphBuilder.buildPipeLayer(gm, config, layers[i - 1], numHiddenNodes, factory);
             currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
             temp.addAll(currNodes);
@@ -350,21 +347,7 @@ public class OAPNnet {
     }
 
     public static void initializeWeightsAndBiases() throws FileNotFoundException, IOException {
-        if (isTraining) {
-            System.out.println("Initializing weights and biases...");
-            for (int i = 0; i < nodesByLayer.size(); i++) {
-                for (int j = 0; j < nodesByLayer.get(i).length; j++) {
-                    if (!(i == 0) && !(i == nodesByLayer.size() - 1)) {
-                        VisualNode node = (VisualNode) nodesByLayer.get(i)[j];
-                        for (int k = 0; k < node.input.length; k++) {
-                            float weight = initializeWeight();
-                            node.setWeight(k, weight);
-                        }
-                        node.setBias(new Float(0.0));
-                    }
-                }
-            }
-        } else {
+        if (!isTraining) {
             System.out.println("Loading weights and biases from files...");
             BufferedReader weightBR = new BufferedReader(new FileReader(weightsInputFN));
             BufferedReader biasBR = new BufferedReader(new FileReader(biasesInputFN));
@@ -456,12 +439,13 @@ public class OAPNnet {
                 newWeights = (HashMap<Integer, ArrayList<Float>>) arrays[0];
                 newBiases = (HashMap<Integer, Float>) arrays[1];
             }
-            for (int j = 0; j < nodesByLayer.size(); j++) {
-                if (!(j == 0) && !(j == nodesByLayer.size() - 1)) {
+            for (int j = 2; j < nodesByLayer.size(); j++) {
+                if (j != nodesByLayer.size() - 1) {
                     for (int k = 0; k < nodesByLayer.get(j).length; k++) {
                         VisualNode node = (VisualNode) nodesByLayer.get(j)[k];
                         for (int l = 0; l < node.getWeightsLength(); l++) {
-                            node.setWeight(l, node.getWeight(l) - (learningRate / epoch[i].length) * newWeights.get(node.stageId).get(l));
+                            node.setWeight(l, node.getWeight(l) - (learningRate 
+                                    / epoch[i].length) * newWeights.get(node.stageId).get(l));
                         }
 
                         node.setBias(node.getBias() - (learningRate / epoch[i].length) * newBiases.get(node.stageId));
@@ -501,15 +485,29 @@ public class OAPNnet {
         PronghornStage[] nodes = nodesByLayer.get(nodesByLayer.size() - 2);
         for (int i = 0; i < nodes.length; i++) {
             costDerivative.add(((VisualNode) nodes[i]).getActivation() - desired);
+        }
+        
+        nodes = nodesByLayer.get(nodesByLayer.size() - 3);
+        for (int i = 0; i < nodes.length; i++) {
             layerActivations.add(((VisualNode) nodes[i]).getActivation());
         }
 
         // Delta value for output layer
         delta = hadamardProduct(costDerivative, ReLuArray(zArray));
-        //newBiases.put(nodesByLayer.size() - 2, delta);
-        //newWeights.put(nodesByLayer.size() - 2, vectMult(delta, layerActivations));
 
-        // Start i at size - 3 because we skip the output stage layer, and the output nodes layer is done above
+        // Assign new biases and weights for output layer
+        for (int j = 0; j < delta.size(); j++) {
+            nodeWeights = new ArrayList();
+            for (int k = 0; k < layerActivations.size(); k++) {
+                newWeight = delta.get(j) * layerActivations.get(k);
+                nodeWeights.add(newWeight);
+            }
+            newBiases.put(nodesByLayer.get(nodesByLayer.size() - 2)[j].stageId, delta.get(j));
+            newWeights.put(nodesByLayer.get(nodesByLayer.size() - 2)[j].stageId, nodeWeights);
+        }
+
+        // Start i at size - 3 because we skip the OutputStage layer (size - 1), 
+        // and the last VisualNodes layer is done above
         for (int i = nodesByLayer.size() - 3; i > 1; i--) {
             zArray = new ArrayList();
             layerActivations = new ArrayList();
@@ -535,6 +533,7 @@ public class OAPNnet {
 
             nodes = nodesByLayer.get(i);
             for (int j = 0; j < nodes.length; j++) {
+//                layerActivations.add(((VisualNode) nodes[j]).getActivation());
                 zArray.add(((VisualNode) nodes[j]).getWeightedSum());
             }
 
@@ -562,7 +561,10 @@ public class OAPNnet {
         ArrayList<ArrayList<Float>> transposed;
 
         if (arr.get(0).size() == arr.size()) {
-            transposed = new ArrayList(arr);
+            transposed = new ArrayList(arr.size());
+            for (int i = 0; i < arr.size(); i++) {
+                transposed.add(i, new ArrayList(arr.size()));
+            }
             for (int i = 0; i < arr.size(); i++) {
                 for (int j = 0; j < arr.get(i).size(); j++) {
                     transposed.get(j).add(i, arr.get(i).get(j));
@@ -701,8 +703,9 @@ public class OAPNnet {
 
     public static ArrayList<String> printNeuralNet() {
         ArrayList<String> strings = new ArrayList();
-        String s = "";
+        String s;
         for (int i = 0; i < nodesByLayer.size(); i++) {
+            s = "";
             for (int j = 0; j < nodesByLayer.get(i).length; j++) {
                 PronghornStage stage = nodesByLayer.get(i)[j];
                 s += "(" + stage.stageId + ":";
@@ -713,13 +716,14 @@ public class OAPNnet {
                     s += " OutputStage)";
                 } else {
                     VisualNode node = (VisualNode) stage;
+                    s += " VisualNode";
                     for (int k = 0; k < node.getWeightsLength(); k++) {
-                        s += " VisualNode w" + k + "=" + node.getWeight(k);
+                        s += " w" + k + "=" + node.getWeight(k);
                     }
                     s += " b=" + node.getBias() + ")";
                 }
-                strings.add(s);
             }
+            strings.add(s);
         }
 
         System.out.println(strings);

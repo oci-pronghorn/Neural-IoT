@@ -20,7 +20,7 @@ public class VisualNode extends PronghornStage {
         this.input = new Pipe[]{input};
         this.output = output;
         this.bias = 0;
-        this.weights = new float[]{0.0f};
+        this.weights = new float[]{1.0f};
     }
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output) {
@@ -29,6 +29,7 @@ public class VisualNode extends PronghornStage {
         this.output = output;
         this.bias = 0;
         this.weights = new float[input.length];
+        initializeWeights();
     }
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic> output) {
@@ -37,6 +38,7 @@ public class VisualNode extends PronghornStage {
         this.output = new Pipe[]{output};
         this.bias = 0;
         this.weights = new float[input.length];
+        initializeWeights();
     }
 
     /**
@@ -105,6 +107,12 @@ public class VisualNode extends PronghornStage {
             results = Math.min(results, SchemalessPipe.roomRemaining(output[i]));
         }
         return results;
+    }
+    
+    private void initializeWeights() {
+        for (int i = 0; i < this.weights.length; i++) {
+            this.weights[i] = (float) Math.random();
+        }
     }
 
     public float getActivation() {
