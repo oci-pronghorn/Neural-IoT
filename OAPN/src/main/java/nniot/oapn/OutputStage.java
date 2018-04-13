@@ -17,7 +17,6 @@ import java.util.logging.Logger;
 public class OutputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] input;
-    private int curDataExample;
     private static BufferedWriter outputFileWriter;
     private float[] desired;
     //private File weightsFile;
@@ -32,7 +31,6 @@ public class OutputStage extends PronghornStage {
     public OutputStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, 
             String fname, float[] desired) throws FileNotFoundException, IOException {
         super(gm, input, NONE);
-        curDataExample = 0;
         this.input = input;
         this.desired = desired;
         if (outputFileWriter == null) {
@@ -64,38 +62,27 @@ public class OutputStage extends PronghornStage {
                 SchemalessPipe.releaseReads(input[i]);
                 data[i] = curr;
             }
+            
+            try {
+                writeOutput();
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
-        
-//        if (!(data == null)) {
-//            try {
-//                writeOutput();
-//            } catch (FileNotFoundException ex) {
-//                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-//            } catch (IOException ex) {
-//                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//        }
     }
 
-    /* public int writeOutput() {
-     int result = Integer.MAX_VALUE;
-     int i = output.length;
-     while (--i>=0) {
-     result = Math.min(result, SchemalessPipe.roomRemaining(output[i]));
-     }
-     return result;
-     }*/
     public void writeOutput() throws FileNotFoundException, IOException {
-        String curOutputLabel = translateToCorrectLabel(getMaxActivation());
-        String op = "";
+        float max = getMaxActivation();
+        float output = 0.0f;
+        
         for (int i = 0; i < data.length; i++) {
-            op += data[i] + "";
+            if (data[i] == max)
+                output = getCorrelatedOutput(i);
         }
-        op += curOutputLabel;
-        outputFileWriter.write(op);
+        outputFileWriter.write(Float.toString(output));
         outputFileWriter.flush();
-        curDataExample++;
-
     }
 
     /*
@@ -104,18 +91,11 @@ public class OutputStage extends PronghornStage {
      */
     public float getMaxActivation() {
         float maxActivation = Float.MIN_VALUE;
-
-        if (availCount() > 0) {
-            for (int i = 0; i < input.length; i++) {
-                float curr = SchemalessPipe.readFloat(input[i]);
-                System.out.println("Max Activation: " + curr);
-                SchemalessPipe.releaseReads(input[i]);
-
-                if (curr > maxActivation) {
-                    maxActivation = curr;
-                }
+        if (data != null) {
+            for (int i = 0; i < data.length; i++) {
+                if (data[i] > maxActivation)
+                    maxActivation = data[i];
             }
-
         }
 
         return maxActivation;
@@ -127,18 +107,8 @@ public class OutputStage extends PronghornStage {
      *
      * @return float[] an array of all outputs currently held in the stage
      */
-    public float[] getAllOutputStageActivations() {
-        float[] activations = null;
-
-        if (availCount() > 0) {
-            activations = new float[input.length];
-            for (int i = 0; i < input.length; i++) {
-                activations[i] = SchemalessPipe.readFloat(input[i]);
-                //SchemalessPipe.releaseReads(input[i]);
-            }
-        }
-
-        return activations;
+    public float[] getData() {
+        return data;
     }
 
     private int availCount() {
@@ -147,17 +117,12 @@ public class OutputStage extends PronghornStage {
     }
 
     private int messagesToConsume() {
-
         int results = Integer.MAX_VALUE;
         for (int i = 0; i < input.length; i++) {
             results = Math.min(results, SchemalessPipe.contentRemaining(input[i]));
         }
 
         return results;
-    }
-
-    private String translateToCorrectLabel(float maxActivation) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     
     public float getCorrelatedOutput(int index) {

@@ -55,8 +55,6 @@ public class VisualNode extends PronghornStage {
                 this.activation = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
                 sum += (this.activation * weights[i]) + bias;
-                if (this.stageId == 23)
-                    System.out.println(sum);
             }
 
             //send this value to all the down stream nodes

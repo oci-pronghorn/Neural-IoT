@@ -224,7 +224,7 @@ public class OAPNnet {
 
         desired = new float[numClasses];
         for (int i = 0; i < numClasses; i++) {
-            desired[i] = i + 1;
+            desired[i] = classes.get(i);
         }
 
         numOutputNodes = numClasses;
@@ -482,7 +482,7 @@ public class OAPNnet {
                 exampleData[j] = epoch[i][j + 1];
             }
             input.giveInputData(exampleData);
-            while ((out = output.getAllOutputStageActivations()) == null) {
+            while ((out = output.getData()) == null) {
                 ;
             }
             for (int j = 0; j < out.length; j++) {
@@ -531,7 +531,7 @@ public class OAPNnet {
 
         // For each output value, add that value to the activation array
         OutputStage output = (OutputStage) nodesByLayer.get(nodesByLayer.size() - 1)[0];
-        float[] outputs = output.getAllOutputStageActivations();
+        float[] outputs = output.getData();
         for (int i = 0; i < outputs.length; i++) {
             zArray.add(outputs[i]);
         }
