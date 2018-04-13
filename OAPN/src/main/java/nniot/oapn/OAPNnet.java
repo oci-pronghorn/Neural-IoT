@@ -10,6 +10,7 @@ import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FileNotFoundException;
@@ -20,6 +21,8 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Nick Kirkpatrick
@@ -30,10 +33,12 @@ import java.util.HashMap;
 public class OAPNnet {
 
     static String testDataFN = ""; //this file will not have classifications
-    static String weightsInputFN = ""; //this file will have weights obtained via training
-    static String weightsOutputFN = "";
-    static String biasesInputFN = ""; //this file will have biases obtained via training
-    static String biasesOutputFN = "";
+    static String weightsInputFN = "INPUT-weights"; //this file will have weights obtained via training
+    static String weightsOutputFN = "OUTPUT-weights";
+    static String biasesInputFN = "INPUT-biases"; //this file will have biases obtained via training
+    static String biasesOutputFN = "OUTPUT-biases";
+
+    static BufferedWriter outputWriter;
 
     static String trainingDataFN = "./wineTraining.data"; // this file will already have classifications
     static Boolean isTraining = true;
@@ -75,11 +80,12 @@ public class OAPNnet {
             buildVisualNeuralNet(gm, numHiddenLayers, numHiddenNodes);
 
             try {
+                outputWriter = new BufferedWriter(new FileWriter(new File("OUTPUT"), false));
                 initializeWeightsAndBiases();
             } catch (FileNotFoundException e) {
-                System.out.println("File " + e.toString() + " not found.");
+                System.out.println("File not found.");
             } catch (IOException e) {
-                System.out.println("File " + e.toString() + "is inaccessible.");
+                System.out.println("File is inaccessible.");
             }
 
             System.out.println("Generating epochs...");
@@ -97,6 +103,13 @@ public class OAPNnet {
                 printNeuralNet();
                 updateWeights(epochsSet[i], 0.5f);
                 System.out.println("Finished epoch " + i + "...");
+            }
+
+            System.out.println("Writing final weights and biases to a file..");
+            try {
+                writeWeightsBiases(weightsOutputFN, biasesOutputFN);
+            } catch (IOException e) {
+                System.out.println("File is inaccessible.");
             }
 
         } else {
@@ -259,8 +272,10 @@ public class OAPNnet {
         float min = Float.MAX_VALUE;
         float max = Float.MIN_VALUE;
 
-        for (int i = 0; i < data[0].length; i++) {
-            for (int j = 1; j < data.length; j++) {
+        for (int i = 1; i < data[0].length; i++) {
+            min = Float.MAX_VALUE;
+            max = Float.MIN_VALUE;
+            for (int j = 0; j < data.length; j++) {
                 if (data[j][i] < min) {
                     min = data[j][i];
                 }
@@ -450,7 +465,7 @@ public class OAPNnet {
         BufferedWriter biasesBW = new BufferedWriter(new FileWriter(
                 biasesOutputFile));
 
-        for (int i = 0; i < nodesByLayer.size(); i++) {
+        for (int i = 1; i < nodesByLayer.size() - 1; i++) {
             for (int j = 0; j < nodesByLayer.get(i).length; j++) {
                 String key = nodesByLayer.get(i)[j].toString();
                 for (int k = 0; k < ((VisualNode) nodesByLayer.get(i)[j]).getWeights().length; k++) {
@@ -482,12 +497,13 @@ public class OAPNnet {
                 exampleData[j] = epoch[i][j + 1];
             }
             input.giveInputData(exampleData);
-            while ((out = output.getData()) == null) {
-                ;
-            }
+            do {
+                out = output.getData();
+            } while (out == null);
             for (int j = 0; j < out.length; j++) {
                 System.out.println("Output: " + out[j]);
             }
+            System.out.println("\n");
             Object arrays[] = backpropagation(epoch[i][0]);
             newWeights = (HashMap<Integer, ArrayList<Float>>) arrays[0];
             newBiases = (HashMap<Integer, Float>) arrays[1];
@@ -504,7 +520,14 @@ public class OAPNnet {
                     }
                 }
             }
-            printNeuralNet();
+            //printNeuralNet();
+            try {
+                writeOutput();
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
 
@@ -530,7 +553,6 @@ public class OAPNnet {
         float[] w;
 
         // For each output value, add that value to the activation array
-        OutputStage output = (OutputStage) nodesByLayer.get(nodesByLayer.size() - 1)[0];
         float[] outputs = output.getData();
         for (int i = 0; i < outputs.length; i++) {
             zArray.add(outputs[i]);
@@ -540,9 +562,9 @@ public class OAPNnet {
         for (int i = 0; i < nodes.length; i++) {
             VisualNode node = (VisualNode) nodes[i];
             if (output.getCorrelatedOutput(i) == desired) {
-                costDerivative.add(node.getActivation() - 1.0f);
+                costDerivative.add(node.getWeightedSum() - 1.0f);
             } else {
-                costDerivative.add(node.getActivation());
+                costDerivative.add(node.getWeightedSum());
             }
             //costDerivative.add(((VisualNode) nodes[i]).getActivation() - desired);
         }
@@ -555,16 +577,7 @@ public class OAPNnet {
         // Delta value for output layer
         delta = hadamardProduct(costDerivative, sigmoidDerivativeArray(zArray));
 
-//        // Assign new biases and weights for output layer
-//        for (int j = 0; j < delta.size(); j++) {
-//            nodeWeights = new ArrayList();
-//            for (int k = 0; k < layerActivations.size(); k++) {
-//                newWeight = delta.get(j) * layerActivations.get(k);
-//                nodeWeights.add(newWeight);
-//            }
-//            newBiases.put(nodesByLayer.get(nodesByLayer.size() - 2)[j].stageId, delta.get(j));
-//            newWeights.put(nodesByLayer.get(nodesByLayer.size() - 2)[j].stageId, nodeWeights);
-//        }
+        // Assign new biases and weights for output layer
         layerWeightsMatrix = vectMult(delta, layerActivations);
         for (int i = 0; i < nodesByLayer.get(nodesByLayer.size() - 2).length; i++) {
             newBiases.put(nodesByLayer.get(nodesByLayer.size() - 2)[i].stageId, delta.get(i));
@@ -649,7 +662,7 @@ public class OAPNnet {
 
         return transposed;
     }
-    
+
     public static ArrayList<Float> sigmoidDerivativeArray(ArrayList<Float> arr) {
         ArrayList<Float> retArr = new ArrayList();
         for (float i : arr) {
@@ -657,11 +670,11 @@ public class OAPNnet {
         }
         return retArr;
     }
-    
+
     public static float sigmoidDerivative(float z) {
         return sigmoid(z) * (1 - sigmoid(z));
     }
-    
+
     public static float sigmoid(float z) {
         //return (float) Math.log(1 + Math.exp(z));
         return 1.0f / (1.0f + (float) Math.exp(-z));
@@ -700,6 +713,7 @@ public class OAPNnet {
 
     /**
      * Used to calculate multiplication of Mx1 and 1xN vectors.
+     *
      * @param arr1, ArrayList of size Mx1
      * @param arr2, ArrayList of size 1xN
      * @return an ArrayList matrix of floats, of dimensions M,N
@@ -740,6 +754,21 @@ public class OAPNnet {
             retArr.add(arr1.get(i) * arr2.get(i));
         }
         return retArr;
+    }
+
+    public static void writeOutput() throws FileNotFoundException, IOException {
+        float[] data = output.getData();
+        float max = output.getMaxActivation();
+        float printOut = Float.MIN_VALUE;
+
+        for (int i = 0; i < data.length; i++) {
+            if (data[i] == max) {
+                printOut = output.getCorrelatedOutput(i);
+            }
+        }
+        outputWriter.write(Float.toString(printOut) + "\n");
+        outputWriter.flush();
+        output.resetData();
     }
 
     public static float[] listToArray(ArrayList<Float> arr) {

@@ -13,36 +13,31 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.ArrayList;
 
 public class OutputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] input;
     private static BufferedWriter outputFileWriter;
     private float[] desired;
-    //private File weightsFile;
-    //private File biasesFile;
-
     private float[] data;
 
     public static void closeOutputFileWriter() throws IOException {
         outputFileWriter.close();
     }
 
-    public OutputStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, 
+    public OutputStage(GraphManager gm, Pipe<MessageSchemaDynamic>[] input,
             String fname, float[] desired) throws FileNotFoundException, IOException {
         super(gm, input, NONE);
         this.input = input;
         this.desired = desired;
         if (outputFileWriter == null) {
             outputFileWriter = new BufferedWriter(new FileWriter(new File(fname.concat("OUTPUT")), false));
-
         }
-        //weightsFile = new File(fname.concat("OUTPUT-weights"));
-        // biasesFile = new File(fname.concat("OUTPUT-biases"));
         this.data = null;
     }
 
-    public static OutputStage newInstance(GraphManager gm, 
+    public static OutputStage newInstance(GraphManager gm,
             Pipe<MessageSchemaDynamic>[] input, String fname, float[] desired) throws FileNotFoundException {
         OutputStage outputS = null;
         try {
@@ -62,39 +57,33 @@ public class OutputStage extends PronghornStage {
                 SchemalessPipe.releaseReads(input[i]);
                 data[i] = curr;
             }
-            
-            try {
-                writeOutput();
-            } catch (FileNotFoundException ex) {
-                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (IOException ex) {
-                Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
-            }
         }
     }
 
     public void writeOutput() throws FileNotFoundException, IOException {
         float max = getMaxActivation();
         float output = 0.0f;
-        
+
         for (int i = 0; i < data.length; i++) {
-            if (data[i] == max)
+            if (data[i] == max) {
                 output = getCorrelatedOutput(i);
+            }
         }
-        outputFileWriter.write(Float.toString(output));
+        outputFileWriter.write(Float.toString(output) + "\n");
         outputFileWriter.flush();
     }
 
-    /*
-    Find the max activation values of the pipes coming into this stage in order
-    to determine what class the NN thinks this example is.
+    /**
+     * Find the max activation values of the pipes coming into this stage in order
+     * to determine what class the NN thinks this example is.
      */
     public float getMaxActivation() {
         float maxActivation = Float.MIN_VALUE;
         if (data != null) {
             for (int i = 0; i < data.length; i++) {
-                if (data[i] > maxActivation)
+                if (data[i] > maxActivation) {
                     maxActivation = data[i];
+                }
             }
         }
 
@@ -124,8 +113,12 @@ public class OutputStage extends PronghornStage {
 
         return results;
     }
-    
+
     public float getCorrelatedOutput(int index) {
         return desired[index];
+    }
+    
+    public void resetData() {
+        this.data = null;
     }
 }
