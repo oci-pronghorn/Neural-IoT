@@ -55,11 +55,13 @@ public class VisualNode extends PronghornStage {
                 this.activation = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
                 sum += (this.activation * weights[i]) + bias;
+                if (this.stageId == 23)
+                    System.out.println(sum);
             }
 
             //send this value to all the down stream nodes
             int j = output.length;
-            this.weightedSum = ReLu(sum);
+            this.weightedSum = sigmoid(sum);
             while (--j >= 0) {
                 SchemalessPipe.writeFloat(output[j], this.weightedSum);
                 SchemalessPipe.publishWrites(output[j]);
@@ -79,6 +81,11 @@ public class VisualNode extends PronghornStage {
         return Math.max(0, sum);
     }
 
+    public float sigmoid(float z) {
+        //return (float) Math.log(1 + Math.exp(z));
+        return 1.0f / (1.0f + (float) Math.exp(-z));
+    }
+
     private int availCount() {
         int avail = messagesToConsume();
         if (avail > 0) {
@@ -88,7 +95,6 @@ public class VisualNode extends PronghornStage {
     }
 
     private int messagesToConsume() {
-
         int results = Integer.MAX_VALUE;
         int i = input.length;
         assert (i > 0);
@@ -108,7 +114,7 @@ public class VisualNode extends PronghornStage {
         }
         return results;
     }
-    
+
     private void initializeWeights() {
         for (int i = 0; i < this.weights.length; i++) {
             this.weights[i] = (float) Math.random();

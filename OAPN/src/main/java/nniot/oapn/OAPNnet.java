@@ -56,10 +56,9 @@ public class OAPNnet {
     static int numHiddenLayers = 2; // default = 2
     static int numHiddenNodes = 4; // default = 4
     static int numOutputNodes = 3;
+    static float[] desired;
 
     public static void main(String[] args) throws FileNotFoundException {
-        trainingData = new Float[numTrainingRecords][numAttributes + 1];
-        testingData = new Float[numTestRecords][numAttributes];
         //String []   trainingAnswers = new String[numTrainingRecords];
 
         //System.out.println("Directory: " + System.getProperty("user.dir"));
@@ -69,8 +68,10 @@ public class OAPNnet {
         GraphManager.combineCommonEdges = false;
         GraphManager.addDefaultNota(gm, GraphManager.SCHEDULE_RATE, 20_000);
         if (isTraining) {
+            preprocessData(trainingDataFN);
+            trainingData = new Float[numTrainingRecords][numAttributes + 1];
             trainingData = readInData(trainingData, trainingDataFN);
-            preprocessData();
+            trainingData = normalizeData(trainingData);
             buildVisualNeuralNet(gm, numHiddenLayers, numHiddenNodes);
 
             try {
@@ -87,15 +88,20 @@ public class OAPNnet {
             //Create array containing each epoch's examples' outputs and the desired outputs
             //updateWeights() takes float[]
 
-            for (int i = 0; i < epochsSet.length; i++) {
-                //printNeuralNet();
-                updateWeights(epochsSet[i], 0.5f);
-            }
-
+            System.out.println("Creating telemetry agent...");
             gm.enableTelemetry(8089);
             StageScheduler.defaultScheduler(gm).startup();
 
+            for (int i = 0; i < epochsSet.length; i++) {
+                System.out.println("Updating weights and biases...");
+                printNeuralNet();
+                updateWeights(epochsSet[i], 0.5f);
+                System.out.println("Finished epoch " + i + "...");
+            }
+
         } else {
+            preprocessData(testDataFN);
+            testingData = new Float[numTestRecords][numAttributes];
             testingData = readInData(testingData, testDataFN);
             //buildVisualNeuralNet(gm, testingData, numHiddenLayers, numHiddenNodes);
 
@@ -186,18 +192,89 @@ public class OAPNnet {
         }
     }
 
-    public static void preprocessData() {
+    public static void preprocessData(String fn) {
         int numClasses = 0;
+        int numExamples = 0;
+        String line;
+        String[] fields;
+        ArrayList<ArrayList<Float>> data = new ArrayList();
         ArrayList<Float> classes = new ArrayList<>();
-        for (int i = 0; i < trainingData.length; i++) {
-            if (!classes.contains(trainingData[i][0])) {
-                classes.add(trainingData[i][0]);
-                numClasses++;
+
+        try {
+            FileReader fileReader = new FileReader(fn);
+            BufferedReader bufferedReader = new BufferedReader(fileReader);
+
+            while ((line = bufferedReader.readLine()) != null) {
+                fields = line.split(",");
+                data.add(new ArrayList());
+                for (int i = 0; i < fields.length; i++) {
+                    data.get(numExamples).add(Float.valueOf(fields[i]));
+                }
+                if (!(classes.contains(Float.valueOf(fields[0])))) {
+                    classes.add(Float.valueOf(fields[0]));
+                    numClasses++;
+                }
+                numExamples++;
             }
+        } catch (FileNotFoundException ex) {
+            System.out.println(ex + " Unable to open file: " + fn);
+        } catch (IOException ex) {
+            System.out.println(ex + " while reading file: " + fn);
+        }
+
+        desired = new float[numClasses];
+        for (int i = 0; i < numClasses; i++) {
+            desired[i] = i + 1;
         }
 
         numOutputNodes = numClasses;
-        numAttributes = trainingData[0].length - 1;
+        numAttributes = data.get(0).size() - 1;
+        numTrainingRecords = data.size();
+    }
+
+    public static Float[][] readInData(Float[][] data, String fn) {
+        String line;
+        try {
+            int i = 0;
+            FileReader fileReader = new FileReader(fn);
+            BufferedReader bufferedReader = new BufferedReader(fileReader);
+
+            while ((line = bufferedReader.readLine()) != null) {
+                String[] temp = line.split(",");
+                for (int j = 0; j < temp.length; j++) {
+                    data[i][j] = Float.valueOf(temp[j]);
+                }
+                i++;
+            }
+            bufferedReader.close();
+        } catch (FileNotFoundException ex) {
+            System.out.println("Unable to open file: " + fn);
+        } catch (IOException ex) {
+            System.out.println("IOException while reading file: " + fn);
+        }
+        return data;
+    }
+
+    public static Float[][] normalizeData(Float[][] data) {
+        float min = Float.MAX_VALUE;
+        float max = Float.MIN_VALUE;
+
+        for (int i = 0; i < data[0].length; i++) {
+            for (int j = 1; j < data.length; j++) {
+                if (data[j][i] < min) {
+                    min = data[j][i];
+                }
+                if (data[j][i] > max) {
+                    max = data[j][i];
+                }
+            }
+
+            for (int j = 0; j < data.length; j++) {
+                data[j][i] = (data[j][i] - min) / (max - min);
+            }
+        }
+
+        return data;
     }
 
     //Build OAPN Neural Net sized according to arguments numHiddenLayers and numHiddenNodes
@@ -258,7 +335,7 @@ public class OAPNnet {
         prevNodes.addAll(currNodes);
 
         //Create data consumer layer
-        output = OutputStage.newInstance(gm, fromLastHiddenLayer, "");
+        output = OutputStage.newInstance(gm, fromLastHiddenLayer, "", desired);
 
         currNodes.addAll(Arrays.asList(GraphManager.allStages(gm)));
         currNodes.removeAll(prevNodes);
@@ -287,29 +364,6 @@ public class OAPNnet {
                 }
             }
         }
-    }
-
-    public static Float[][] readInData(Float[][] data, String fn) {
-        String line;
-        try {
-            int i = 0;
-            FileReader fileReader = new FileReader(fn);
-            BufferedReader bufferedReader = new BufferedReader(fileReader);
-
-            while ((line = bufferedReader.readLine()) != null) {
-                String[] temp = line.split(",");
-                for (int j = 0; j < temp.length; j++) {
-                    data[i][j] = Float.valueOf(temp[j]);
-                }
-                i++;
-            }
-            bufferedReader.close();
-        } catch (FileNotFoundException ex) {
-            System.out.println("Unable to open file: " + fn);
-        } catch (IOException ex) {
-            System.out.println("IOException while reading file: " + fn);
-        }
-        return data;
     }
 
     public static Float[][][] generateEpochs(Float[][] inputData) {
@@ -421,14 +475,18 @@ public class OAPNnet {
         Map<Integer, ArrayList<Float>> newWeights;
         Map<Integer, Float> newBiases;
         float[] exampleData;
+        float[] out;
         for (int i = 0; i < epoch.length; i++) {
-            exampleData = new float[epoch[i].length];
-            for (int j = 1; j < epoch[i].length; j++) {
-                exampleData[j] = epoch[i][j];
+            exampleData = new float[epoch[i].length - 1];
+            for (int j = 0; j < epoch[i].length - 1; j++) {
+                exampleData[j] = epoch[i][j + 1];
             }
             input.giveInputData(exampleData);
-            while(output.getMaxActivation() == Float.MIN_VALUE) {
+            while ((out = output.getAllOutputStageActivations()) == null) {
                 ;
+            }
+            for (int j = 0; j < out.length; j++) {
+                System.out.println("Output: " + out[j]);
             }
             Object arrays[] = backpropagation(epoch[i][0]);
             newWeights = (HashMap<Integer, ArrayList<Float>>) arrays[0];
@@ -446,6 +504,7 @@ public class OAPNnet {
                     }
                 }
             }
+            printNeuralNet();
         }
     }
 
@@ -471,33 +530,45 @@ public class OAPNnet {
         float[] w;
 
         // For each output value, add that value to the activation array
-        float[] outputs = ((OutputStage) nodesByLayer.get(nodesByLayer.size() - 1)[0]).getAllOutputStageActivations();
+        OutputStage output = (OutputStage) nodesByLayer.get(nodesByLayer.size() - 1)[0];
+        float[] outputs = output.getAllOutputStageActivations();
         for (int i = 0; i < outputs.length; i++) {
             zArray.add(outputs[i]);
         }
 
         PronghornStage[] nodes = nodesByLayer.get(nodesByLayer.size() - 2);
         for (int i = 0; i < nodes.length; i++) {
-            costDerivative.add(((VisualNode) nodes[i]).getActivation() - desired);
+            VisualNode node = (VisualNode) nodes[i];
+            if (output.getCorrelatedOutput(i) == desired) {
+                costDerivative.add(node.getActivation() - 1.0f);
+            } else {
+                costDerivative.add(node.getActivation());
+            }
+            //costDerivative.add(((VisualNode) nodes[i]).getActivation() - desired);
         }
 
         nodes = nodesByLayer.get(nodesByLayer.size() - 3);
         for (int i = 0; i < nodes.length; i++) {
-            layerActivations.add(((VisualNode) nodes[i]).getActivation());
+            layerActivations.add(((VisualNode) nodes[i]).getWeightedSum());
         }
 
         // Delta value for output layer
-        delta = hadamardProduct(costDerivative, ReLuArray(zArray));
+        delta = hadamardProduct(costDerivative, sigmoidDerivativeArray(zArray));
 
-        // Assign new biases and weights for output layer
-        for (int j = 0; j < delta.size(); j++) {
-            nodeWeights = new ArrayList();
-            for (int k = 0; k < layerActivations.size(); k++) {
-                newWeight = delta.get(j) * layerActivations.get(k);
-                nodeWeights.add(newWeight);
-            }
-            newBiases.put(nodesByLayer.get(nodesByLayer.size() - 2)[j].stageId, delta.get(j));
-            newWeights.put(nodesByLayer.get(nodesByLayer.size() - 2)[j].stageId, nodeWeights);
+//        // Assign new biases and weights for output layer
+//        for (int j = 0; j < delta.size(); j++) {
+//            nodeWeights = new ArrayList();
+//            for (int k = 0; k < layerActivations.size(); k++) {
+//                newWeight = delta.get(j) * layerActivations.get(k);
+//                nodeWeights.add(newWeight);
+//            }
+//            newBiases.put(nodesByLayer.get(nodesByLayer.size() - 2)[j].stageId, delta.get(j));
+//            newWeights.put(nodesByLayer.get(nodesByLayer.size() - 2)[j].stageId, nodeWeights);
+//        }
+        layerWeightsMatrix = vectMult(delta, layerActivations);
+        for (int i = 0; i < nodesByLayer.get(nodesByLayer.size() - 2).length; i++) {
+            newBiases.put(nodesByLayer.get(nodesByLayer.size() - 2)[i].stageId, delta.get(i));
+            newWeights.put(nodesByLayer.get(nodesByLayer.size() - 2)[i].stageId, layerWeightsMatrix.get(i));
         }
 
         // Start i at size - 3 because we skip the OutputStage layer (size - 1), 
@@ -510,7 +581,7 @@ public class OAPNnet {
             // Get the activations from the next layer
             nodes = nodesByLayer.get(i - 1);
             for (int j = 0; j < nodes.length; j++) {
-                layerActivations.add(((VisualNode) nodes[j]).getActivation());
+                layerActivations.add(((VisualNode) nodes[j]).getWeightedSum());
             }
 
             // Get the weights between last layer and current
@@ -531,7 +602,7 @@ public class OAPNnet {
             }
 
             // Delta value for i-th layer
-            delta = hadamardProduct(matMult(transpose(layerWeightsMatrix), delta), ReLuArray(zArray));
+            delta = hadamardProduct(matMult(transpose(layerWeightsMatrix), delta), sigmoidDerivativeArray(zArray));
 
             for (int j = 0; j < delta.size(); j++) {
                 nodeWeights = new ArrayList();
@@ -578,41 +649,22 @@ public class OAPNnet {
 
         return transposed;
     }
-
-    /**
-     * Calls ReLu() for each element in array passed.
-     *
-     * @param arr is an ArrayList of floats
-     * @return ArrayList of floats
-     */
-    public static ArrayList<Float> ReLuArray(ArrayList<Float> arr) {
+    
+    public static ArrayList<Float> sigmoidDerivativeArray(ArrayList<Float> arr) {
         ArrayList<Float> retArr = new ArrayList();
         for (float i : arr) {
-            retArr.add(ReLu(i));
+            retArr.add(sigmoidDerivative(i));
         }
         return retArr;
     }
-
-    public static float ReLu(float i) {
-        // Secondary option for rectifier function
-        // return (float) Math.log(1 + Math.exp(i))
-        return Math.max(0, i);
+    
+    public static float sigmoidDerivative(float z) {
+        return sigmoid(z) * (1 - sigmoid(z));
     }
-
-    public static ArrayList<Float> derivativeReLuArray(ArrayList<Float> arr) {
-        ArrayList<Float> retArr = new ArrayList();
-        for (float i : arr) {
-            retArr.add(derivativeReLu(i));
-        }
-        return retArr;
-    }
-
-    public static float derivativeReLu(float sum) {
-        if (sum > 0) {
-            return 1.0f;
-        } else {
-            return 0.0f;
-        }
+    
+    public static float sigmoid(float z) {
+        //return (float) Math.log(1 + Math.exp(z));
+        return 1.0f / (1.0f + (float) Math.exp(-z));
     }
 
     public static float dot(ArrayList<Float> a, ArrayList<Float> b) {
@@ -646,17 +698,21 @@ public class OAPNnet {
         return retArr;
     }
 
-    public static ArrayList<Float> vectMult(ArrayList<Float> arr1, ArrayList<Float> arr2) {
-        if (arr1.size() != arr2.size()) {
-            System.out.println("Attempted to multiply incompatible vectors.");
-            return null;
-        }
-
-        ArrayList<Float> retArr = new ArrayList();
+    /**
+     * Used to calculate multiplication of Mx1 and 1xN vectors.
+     * @param arr1, ArrayList of size Mx1
+     * @param arr2, ArrayList of size 1xN
+     * @return an ArrayList matrix of floats, of dimensions M,N
+     */
+    public static ArrayList<ArrayList<Float>> vectMult(ArrayList<Float> arr1, ArrayList<Float> arr2) {
+        ArrayList<ArrayList<Float>> retMat = new ArrayList();
         for (int i = 0; i < arr1.size(); i++) {
-            retArr.add(arr1.get(i) * arr2.get(i));
+            retMat.add(new ArrayList());
+            for (int j = 0; j < arr2.size(); j++) {
+                retMat.get(i).add(arr1.get(i) * arr2.get(j));
+            }
         }
-        return retArr;
+        return retMat;
     }
 
     public static ArrayList<Float> vectAdd(ArrayList<Float> arr1, ArrayList<Float> arr2) {
