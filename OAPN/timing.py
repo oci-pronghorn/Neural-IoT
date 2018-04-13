@@ -28,9 +28,9 @@ if(len(sys.argv) < 2):
 #Vary network size
 
 #num layers
-for i in range(3,6):
+for i in range(3,11):
     #layer width
-    for j in range(3,6):
+    for j in range(3,11):
         #spin off thread to end pronghorn because it stalls when done
         thread = threading.Thread(target=javakill, args=())
         thread.start()        

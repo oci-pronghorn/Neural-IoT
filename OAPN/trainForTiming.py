@@ -13,18 +13,18 @@ import threading
 
 sleepTime = 15
 
-def my_threaded_func():
+def javakill():
     time.sleep(sleepTime)
     os.system("killall java")
 
 #num layers
-for i in range(3,10):
+for i in range(3,11):
     #layer width
-    for j in range(3,10):
+    for j in range(3,11):
         #print ('java', '-jar', 'target/' + sys.argv[1], "-n", str(j), "-l", str(i), "-wout", "OUTPUT-weights" + str(i) + str(j), "-bout", "OUTPUT-biases" + str(i) + str(j))
 
         #spin off thread to end pronghorn because it stalls when done
-        thread = threading.Thread(target=my_threaded_func, args=())
+        thread = threading.Thread(target=javakill, args=())
         thread.start()
 
         subprocess.call(['java', '-jar', 'target/' + sys.argv[1], "-n", str(j), "-l", str(i), "-wout", "OUTPUT-weights" + str(i) + str(j), "-bout", "OUTPUT-biases" + str(i) + str(j)]) 
