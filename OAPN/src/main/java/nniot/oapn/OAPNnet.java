@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  */
 public class OAPNnet {
 
-    static String testDataFN = ""; //this file will not have classifications
+    static String testDataFN = "TEST-data"; //this file will not have classifications
     static String weightsInputFN = "INPUT-weights"; //this file will have weights obtained via training
     static String weightsOutputFN = "OUTPUT-weights";
     static String biasesInputFN = "INPUT-biases"; //this file will have biases obtained via training
@@ -116,21 +116,23 @@ public class OAPNnet {
             preprocessData(testDataFN);
             testingData = new Float[numTestRecords][numAttributes];
             testingData = readInData(testingData, testDataFN);
-            //buildVisualNeuralNet(gm, testingData, numHiddenLayers, numHiddenNodes);
+            testingData = normalizeData(testingData);
+            buildVisualNeuralNet(gm, numHiddenLayers, numHiddenNodes);
 
             try {
                 initializeWeightsAndBiases();
+                outputWriter = new BufferedWriter(new FileWriter(new File("OUTPUT"), false));
+                writeOutput();
             } catch (FileNotFoundException e) {
                 System.out.println("File " + e.toString() + " not found.");
             } catch (IOException e) {
                 System.out.println("File " + e.toString() + "is inaccessible.");
             }
 
-            // TODO: Logic for testing new data sets goes here
+            System.out.println("Creating telemetry agent...");
+            gm.enableTelemetry(8089);
+            StageScheduler.defaultScheduler(gm).startup();          
         }
-
-        gm.enableTelemetry(8089);
-        StageScheduler.defaultScheduler(gm).startup();
     }
 
     public static void interpretCommandLineOptions(String[] args) {

@@ -15,26 +15,26 @@ bestLayerWidth = 0
 
 if(len(sys.argv) < 2):
 	print "Specify jar to time"
-	sys.exit()
+    sys.exit()
 
 
 #Vary network size
 
 #num layers
 for i in range(3,11):
-        #layer width
-        for j in range(3,11):
-                start = time.time()
-                #subprocess.call(['java', '-jar', 'target/' + sys.argv[1]], "-testing", "-l " + i, "-n " + j)
-                end = time.time()
+    #layer width
+    for j in range(3,11):
+        start = time.time()
+        #subprocess.call(['java', '-jar', 'target/' + sys.argv[1]], "-n", j, "-l", i, "-testing", "-win", "OUTPUT-weights" + i + j, -"bin", "OUTPUT-biases" + i + j) 
+        end = time.time()
 
-                print("Execution time of net was " + str(end - start) + " with " + str(i) +
-                " layers, " + str(j) + " nodes per layer, and " + str(i * j) + " total nodes.") 
+        print("Execution time of net was " + str(end - start) + " with " + str(i) +
+        " layers, " + str(j) + " nodes per layer, and " + str(i * j) + " total nodes.") 
 
-                if ((end - start) < minTime):
-                        minTime = (end - start)
-                        bestNumLayers = i
-                        bestLayerWidth = j
+    if ((end - start) < minTime):
+        minTime = (end - start)
+        bestNumLayers = i
+        bestLayerWidth = j
 
 #Which size performed best?
 print "\nThe best number of layers was " + str(bestNumLayers)
@@ -45,11 +45,10 @@ print "The time for this combo was " + str(minTime) + " seconds."
 avg = 0;
 numToTest = 1000
 for i in (0,numToTest):
-        start = time.time()
-        #subprocess.call(['java', '-jar', 'target/' + sys.argv[1]], "-testing", "-l " + bestNumLayers,
-        #                "-n " + bestLayerWidth)
-        end  = time.time()
-        avg += (end - start)
+    start = time.time()
+    #subprocess.call(['java', '-jar', 'target/' + sys.argv[1]], "-n", bestLayerWidth, "-l", bestNumLayers, "-testing", "-win", "fn", -"bin", "fn") 
+    end  = time.time()
+    avg += (end - start)
 
 avg = avg / numToTest
 print "\nThe average classification time for " + str(numToTest) + " test examples was " + str(avg) + " seconds."
