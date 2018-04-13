@@ -13,13 +13,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.ArrayList;
 
 public class OutputStage extends PronghornStage {
 
     private final Pipe<MessageSchemaDynamic>[] input;
     private static BufferedWriter outputFileWriter;
-    private float[] desired;
+    private final float[] desired;
     private float[] data;
 
     public static void closeOutputFileWriter() throws IOException {

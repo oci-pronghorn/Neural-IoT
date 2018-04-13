@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 
 /**
  * @author Nick Kirkpatrick
@@ -40,7 +42,7 @@ public class OAPNnet {
 
     static BufferedWriter outputWriter;
 
-    static String trainingDataFN = "./wineTraining.data"; // this file will already have classifications
+    static String trainingDataFN = "./dayTraining.data"; // this file will already have classifications
     static Boolean isTraining = true;
 
     static Float[][] trainingData;
@@ -114,6 +116,7 @@ public class OAPNnet {
 
         } else {
             preprocessData(testDataFN);
+            // Need to pass in array of classifiers (manually?)
             testingData = new Float[numTestRecords][numAttributes];
             testingData = readInData(testingData, testDataFN);
             testingData = normalizeData(testingData);
@@ -271,8 +274,8 @@ public class OAPNnet {
     }
 
     public static Float[][] normalizeData(Float[][] data) {
-        float min = Float.MAX_VALUE;
-        float max = Float.MIN_VALUE;
+        float min;
+        float max;
 
         for (int i = 1; i < data[0].length; i++) {
             min = Float.MAX_VALUE;
@@ -387,19 +390,12 @@ public class OAPNnet {
         int epochSize = (int) Math.ceil(inputData.length / 10.0f);
         int numEpochs = (int) Math.ceil(inputData.length / epochSize);
         epochsSet = new Float[numEpochs][epochSize][numAttributes + 1];
-        int[] epochSizeCounter = new int[numEpochs];
-        int epochSetIndex;
 
-        for (Float[] row : inputData) {
-            do {
-                epochSetIndex = (int) Math.floor(Math.random() * numEpochs);
-                if (epochSizeCounter[epochSetIndex] < epochSize) {
-                    epochsSet[epochSetIndex][epochSizeCounter[epochSetIndex]] = row;
-                    epochSizeCounter[epochSetIndex] = epochSizeCounter[epochSetIndex] + 1;
-                    row = null;
-                }
-
-            } while (row != null);
+        shuffleArray(inputData);
+        for (int i = 0; i < numEpochs; i++) {
+            for (int j = 0; j < epochSize; j++) {
+                epochsSet[i][j] = inputData[i];
+            }
         }
 
         return epochsSet;
@@ -522,9 +518,8 @@ public class OAPNnet {
                     }
                 }
             }
-            //printNeuralNet();
             try {
-                writeOutput();
+                writeOutput(epoch[i][0]);
             } catch (FileNotFoundException ex) {
                 Logger.getLogger(OutputStage.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
@@ -758,6 +753,24 @@ public class OAPNnet {
         return retArr;
     }
 
+    public static void writeOutput(float desired) throws FileNotFoundException, IOException {
+        float[] data = output.getData();
+        float max = output.getMaxActivation();
+        float printOut = Float.MIN_VALUE;
+
+        for (int i = 0; i < data.length; i++) {
+            if (data[i] == max) {
+                printOut = output.getCorrelatedOutput(i);
+            }
+        }
+        
+        outputWriter.write(Float.toString(printOut) + ", " + Float.toString(desired) + " ");
+        if ((int) printOut != (int) desired)
+            outputWriter.write("x");
+        outputWriter.write("\n");
+        outputWriter.flush();
+    }
+    
     public static void writeOutput() throws FileNotFoundException, IOException {
         float[] data = output.getData();
         float max = output.getMaxActivation();
@@ -768,9 +781,9 @@ public class OAPNnet {
                 printOut = output.getCorrelatedOutput(i);
             }
         }
+        
         outputWriter.write(Float.toString(printOut) + "\n");
         outputWriter.flush();
-        output.resetData();
     }
 
     public static float[] listToArray(ArrayList<Float> arr) {
@@ -779,6 +792,17 @@ public class OAPNnet {
             retArr[i] = arr.get(i);
         }
         return retArr;
+    }
+
+    // Implementing Fisher–Yates shuffle
+    static void shuffleArray(Float[][] arr) {
+        Random rnd = ThreadLocalRandom.current();
+        for (int i = arr.length - 1; i > 0; i--) {
+            int index = rnd.nextInt(i + 1);
+            Float[] a = arr[index];
+            arr[index] = arr[i];
+            arr[i] = a;
+        }
     }
 
     public static ArrayList<String> printNeuralNet() {
