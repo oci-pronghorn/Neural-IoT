@@ -5,6 +5,7 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import java.util.ArrayList;
 
 public class VisualNode extends PronghornStage {
 
@@ -12,8 +13,10 @@ public class VisualNode extends PronghornStage {
     private final Pipe<MessageSchemaDynamic>[] output;
     private float bias;
     private float[] weights;
-    private float activation; // activation value
-    private float weightedSum; //weighted sum passed to next node
+    private float[] activations;
+    private float activation; // activation value of this node
+    private float z; // value of lastActivation * weight + bias, used in backpropogation
+    private float lastActivation; // activation of last node
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
@@ -21,6 +24,7 @@ public class VisualNode extends PronghornStage {
         this.output = output;
         this.bias = 0;
         this.weights = new float[]{1.0f};
+        this.activations = new float[1];
     }
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic>[] input, Pipe<MessageSchemaDynamic>[] output) {
@@ -29,6 +33,7 @@ public class VisualNode extends PronghornStage {
         this.output = output;
         this.bias = 0;
         this.weights = new float[input.length];
+        this.activations = new float[input.length];
         initializeWeights();
     }
 
@@ -38,6 +43,7 @@ public class VisualNode extends PronghornStage {
         this.output = new Pipe[]{output};
         this.bias = 0;
         this.weights = new float[input.length];
+        this.activations = new float[input.length];
         initializeWeights();
     }
 
@@ -49,19 +55,20 @@ public class VisualNode extends PronghornStage {
     @Override
     public void run() {
         while (availCount() > 0) {
-            float sum = 0;
             int i = input.length;
             while (--i >= 0) {
-                this.activation = SchemalessPipe.readFloat(input[i]);
+                this.lastActivation = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
-                sum += (this.activation * weights[i]) + bias;
+                this.activations[i] = this.lastActivation;
             }
-
+            
+            z = dot(activations, weights) + bias;
+            
             //send this value to all the down stream nodes
             int j = output.length;
-            this.weightedSum = sigmoid(sum);
+            this.activation = sigmoid(z);
             while (--j >= 0) {
-                SchemalessPipe.writeFloat(output[j], this.weightedSum);
+                SchemalessPipe.writeFloat(output[j], this.activation);
                 SchemalessPipe.publishWrites(output[j]);
             }
         }
@@ -119,6 +126,19 @@ public class VisualNode extends PronghornStage {
         }
     }
 
+    public static float dot(float[] a, float[] b) {
+        if (a.length != b.length) {
+            System.out.println("Dot product attempted between ArrayLists of different lengths.");
+        }
+        float retVal = 0.0f;
+
+        for (int i = 0; i < a.length; i++) {
+            retVal += a[i] * b[i];
+        }
+
+        return retVal;
+    }
+
     public float getActivation() {
         return this.activation;
     }
@@ -139,8 +159,12 @@ public class VisualNode extends PronghornStage {
         return this.weights.length;
     }
 
-    public float getWeightedSum() {
-        return this.weightedSum;
+    public float getLastActivation() {
+        return this.lastActivation;
+    }
+
+    public float getZ() {
+        return this.z;
     }
 
     public void setBias(float bias) {

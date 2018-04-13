@@ -21,6 +21,8 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.ThreadLocalRandom;
@@ -134,7 +136,7 @@ public class OAPNnet {
 
             System.out.println("Creating telemetry agent...");
             gm.enableTelemetry(8089);
-            StageScheduler.defaultScheduler(gm).startup();          
+            StageScheduler.defaultScheduler(gm).startup();
         }
     }
 
@@ -389,10 +391,10 @@ public class OAPNnet {
     public static Float[][][] generateEpochs(Float[][] inputData) {
         int epochSize = (int) Math.ceil(inputData.length / 10.0f);
         int numEpochs = (int) Math.ceil(inputData.length / epochSize);
-        epochsSet = new Float[numEpochs][epochSize][numAttributes + 1];
+        epochsSet = new Float[numEpochs + 1][epochSize][numAttributes + 1];
 
         shuffleArray(inputData);
-        for (int i = 0; i < numEpochs; i++) {
+        for (int i = 0; i < numEpochs + 1; i++) {
             for (int j = 0; j < epochSize; j++) {
                 epochsSet[i][j] = inputData[i];
             }
@@ -489,20 +491,20 @@ public class OAPNnet {
         Map<Integer, Float> newBiases;
         float[] exampleData;
         float[] out;
+        
         for (int i = 0; i < epoch.length; i++) {
             exampleData = new float[epoch[i].length - 1];
             for (int j = 0; j < epoch[i].length - 1; j++) {
                 exampleData[j] = epoch[i][j + 1];
             }
             input.giveInputData(exampleData);
-            do {
-                out = output.getData();
-            } while (out == null);
+            while(output.buffer.isEmpty());
+            out = output.buffer.poll();
             for (int j = 0; j < out.length; j++) {
                 System.out.println("Output: " + out[j]);
             }
             System.out.println("\n");
-            Object arrays[] = backpropagation(epoch[i][0]);
+            Object arrays[] = backpropagation(out, epoch[i][0]);
             newWeights = (HashMap<Integer, ArrayList<Float>>) arrays[0];
             newBiases = (HashMap<Integer, Float>) arrays[1];
             for (int j = 2; j < nodesByLayer.size(); j++) {
@@ -533,42 +535,33 @@ public class OAPNnet {
      * and activation values. This function finds the error of each node in each
      * layer and stores that value in the node to be used in updateWeights().
      *
-     * @param desired
+     * @param outputs array of floats from the OutputStage data[] field
+     * @param desired float indicating what the answer was supposed to be
      * @return
      */
-    public static Object[] backpropagation(float desired) {
+    public static Object[] backpropagation(float[] outputs, float desired) {
         Map<Integer, ArrayList<Float>> newWeights = new HashMap();
         Map<Integer, Float> newBiases = new HashMap();
         ArrayList<ArrayList<Float>> layerWeightsMatrix;
-        ArrayList<Float> layerWeightsArray;
         ArrayList<Float> zArray = new ArrayList();
         ArrayList<Float> layerActivations = new ArrayList();
         ArrayList<Float> costDerivative = new ArrayList();
         ArrayList<Float> delta;
-        ArrayList<Float> nodeWeights;
-        float newWeight;
-        float[] w;
-
-        // For each output value, add that value to the activation array
-        float[] outputs = output.getData();
-        for (int i = 0; i < outputs.length; i++) {
-            zArray.add(outputs[i]);
-        }
 
         PronghornStage[] nodes = nodesByLayer.get(nodesByLayer.size() - 2);
         for (int i = 0; i < nodes.length; i++) {
             VisualNode node = (VisualNode) nodes[i];
             if (output.getCorrelatedOutput(i) == desired) {
-                costDerivative.add(node.getWeightedSum() - 1.0f);
+                costDerivative.add(node.getActivation() - 1.0f);
             } else {
-                costDerivative.add(node.getWeightedSum());
+                costDerivative.add(node.getActivation());
             }
-            //costDerivative.add(((VisualNode) nodes[i]).getActivation() - desired);
+            zArray.add(node.getZ());
         }
 
         nodes = nodesByLayer.get(nodesByLayer.size() - 3);
         for (int i = 0; i < nodes.length; i++) {
-            layerActivations.add(((VisualNode) nodes[i]).getWeightedSum());
+            layerActivations.add(((VisualNode) nodes[i]).getActivation());
         }
 
         // Delta value for output layer
@@ -584,44 +577,27 @@ public class OAPNnet {
         // Start i at size - 3 because we skip the OutputStage layer (size - 1), 
         // and the last VisualNodes layer is done above
         for (int i = nodesByLayer.size() - 3; i > 1; i--) {
-            zArray = new ArrayList();
             layerActivations = new ArrayList();
-            layerWeightsMatrix = new ArrayList();
+            zArray = new ArrayList();
 
             // Get the activations from the next layer
             nodes = nodesByLayer.get(i - 1);
             for (int j = 0; j < nodes.length; j++) {
-                layerActivations.add(((VisualNode) nodes[j]).getWeightedSum());
-            }
-
-            // Get the weights between last layer and current
-            nodes = nodesByLayer.get(i + 1);
-            for (int j = 0; j < nodes.length; j++) {
-                layerWeightsArray = new ArrayList();
-
-                w = ((VisualNode) nodes[j]).getWeights();
-                for (int k = 0; k < w.length; k++) {
-                    layerWeightsArray.add(w[k]);
-                }
-                layerWeightsMatrix.add(layerWeightsArray);
+                layerActivations.add(((VisualNode) nodes[j]).getActivation());
             }
 
             nodes = nodesByLayer.get(i);
             for (int j = 0; j < nodes.length; j++) {
-                zArray.add(((VisualNode) nodes[j]).getWeightedSum());
+                zArray.add(((VisualNode) nodes[j]).getZ());
             }
 
-            // Delta value for i-th layer
+            // Delta values for i-th layer
             delta = hadamardProduct(matMult(transpose(layerWeightsMatrix), delta), sigmoidDerivativeArray(zArray));
-
-            for (int j = 0; j < delta.size(); j++) {
-                nodeWeights = new ArrayList();
-                for (int k = 0; k < layerActivations.size(); k++) {
-                    newWeight = delta.get(j) * layerActivations.get(k);
-                    nodeWeights.add(newWeight);
-                }
+            layerWeightsMatrix = vectMult(delta, layerActivations);
+            // Assign new biases and weights for i-th layer
+            for (int j = 0; j < nodesByLayer.get(i).length; j++) {
                 newBiases.put(nodesByLayer.get(i)[j].stageId, delta.get(j));
-                newWeights.put(nodesByLayer.get(i)[j].stageId, nodeWeights);
+                newWeights.put(nodesByLayer.get(i)[j].stageId, layerWeightsMatrix.get(j));
             }
         }
 
@@ -763,14 +739,15 @@ public class OAPNnet {
                 printOut = output.getCorrelatedOutput(i);
             }
         }
-        
+
         outputWriter.write(Float.toString(printOut) + ", " + Float.toString(desired) + " ");
-        if ((int) printOut != (int) desired)
+        if ((int) printOut != (int) desired) {
             outputWriter.write("x");
+        }
         outputWriter.write("\n");
         outputWriter.flush();
     }
-    
+
     public static void writeOutput() throws FileNotFoundException, IOException {
         float[] data = output.getData();
         float max = output.getMaxActivation();
@@ -781,7 +758,7 @@ public class OAPNnet {
                 printOut = output.getCorrelatedOutput(i);
             }
         }
-        
+
         outputWriter.write(Float.toString(printOut) + "\n");
         outputWriter.flush();
     }
