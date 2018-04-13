@@ -43,8 +43,9 @@ public class OAPNnet {
     static String biasesOutputFN = "OUTPUT-biases";
 
     static BufferedWriter outputWriter;
+    static BufferedWriter timeOutputWriter;
 
-    static String trainingDataFN = "./dayTraining.data"; // this file will already have classifications
+    static String trainingDataFN = "./wineTraining.data"; // this file will already have classifications
     static Boolean isTraining = true;
 
     static Float[][] trainingData;
@@ -60,7 +61,7 @@ public class OAPNnet {
     static OutputStage output;
 
     static int numAttributes = 13;
-    static int numTestRecords = 100;
+    static int numTestRecords = 50;
     static int numTrainingRecords = 50;
     static int numHiddenLayers = 2; // default = 2
     static int numHiddenNodes = 4; // default = 4
@@ -104,7 +105,7 @@ public class OAPNnet {
 
             for (int i = 0; i < epochsSet.length; i++) {
                 System.out.println("Updating weights and biases...");
-                printNeuralNet();
+                //printNeuralNet();
                 updateWeights(epochsSet[i], 0.5f);
                 System.out.println("Finished epoch " + i + "...");
             }
@@ -117,38 +118,70 @@ public class OAPNnet {
             }
 
         } else {
+            long startTime = System.nanoTime();
             preprocessData(testDataFN);
             // Need to pass in array of classifiers (manually?)
-            testingData = new Float[numTestRecords][numAttributes];
+            testingData = new Float[numTestRecords][numAttributes + 1];
             testingData = readInData(testingData, testDataFN);
             testingData = normalizeData(testingData);
             buildVisualNeuralNet(gm, numHiddenLayers, numHiddenNodes);
-
+            
+ 
             try {
                 initializeWeightsAndBiases();
                 outputWriter = new BufferedWriter(new FileWriter(new File("OUTPUT"), false));
-                writeOutput();
+                timeOutputWriter = new BufferedWriter(new FileWriter(new File("TIMES"), true));
+                
+                //System.out.println("Creating telemetry agent...");
+                gm.enableTelemetry(8089);
+                StageScheduler.defaultScheduler(gm).startup();
+                
+                //System.out.println("Calling process test data");
+                processTestData();
+                
+                //System.out.println("Calling writeOutput");
+                for(int i = 0; i < numTestRecords; i++) {
+                    writeOutput();
+                }
             } catch (FileNotFoundException e) {
                 System.out.println("File " + e.toString() + " not found.");
             } catch (IOException e) {
                 System.out.println("File " + e.toString() + "is inaccessible.");
             }
-
-            System.out.println("Creating telemetry agent...");
-            gm.enableTelemetry(8089);
-            StageScheduler.defaultScheduler(gm).startup();
+            //System.out.println("Finished testing all records...");
+            
+            long endTime = System.nanoTime();
+            long duration = ((endTime - startTime) / 1000000);  //divide by 1000000 to get milliseconds.
+            System.out.println("Execution time with " + numHiddenLayers + " hidden layers and " + 
+                    numHiddenNodes + " nodes per layer ("+ numHiddenLayers * numHiddenNodes 
+                    +" total visual nodes) was " + duration + " milliseconds.");
+            System.out.println("Average time per tested example was " + duration / numTestRecords + " milliseconds.");
+            
+            try {
+                timeOutputWriter.write(Integer.toString(numHiddenLayers) 
+                        + "," + Integer.toString(numHiddenNodes ) 
+                        + "," + Integer.toString(numHiddenLayers * numHiddenNodes ) 
+                        + "," + Long.toString(duration) + "," + Long.toString(duration / numTestRecords) + "\n");
+                timeOutputWriter.flush();
+            } catch (FileNotFoundException e) {
+                System.out.println("File " + e.toString() + " not found.");
+            } catch (IOException e) {
+                System.out.println("File " + e.toString() + "is inaccessible.");
+            }
+            
         }
     }
 
     public static void interpretCommandLineOptions(String[] args) {
         for (int i = 0; i < args.length; i++) {
+            //System.out.println(i + " " + args[i + 1]);
             switch (args[i]) {
                 case "-n":
-                    numHiddenNodes = Integer.getInteger(args[i + 1]);
+                    numHiddenNodes = Integer.parseInt(args[i + 1]);
                     i++;
                     break;
                 case "-l":
-                    numHiddenLayers = Integer.getInteger(args[i + 1]);
+                    numHiddenLayers = Integer.parseInt(args[i + 1]);
                     i++;
                     break;
                 case "-training":
@@ -405,14 +438,14 @@ public class OAPNnet {
 
     public static void initializeWeightsAndBiases() throws FileNotFoundException, IOException {
         if (!isTraining) {
-            System.out.println("Loading weights and biases from files...");
+            //System.out.println("Loading weights and biases from files...");
             BufferedReader weightBR = new BufferedReader(new FileReader(weightsInputFN));
             BufferedReader biasBR = new BufferedReader(new FileReader(biasesInputFN));
             String line;
 
             //Traverse array of nodes by layer, if the key from the file matches the current node,
             //place that weight from file into a temporary array, which then goes into the correct node
-            for (int i = 0; i < nodesByLayer.size(); i++) {
+            for (int i = 1; i < nodesByLayer.size() - 1; i++) {
                 for (int j = 0; j < nodesByLayer.get(i).length; j++) {
                     float weightsForCurrNode[] = new float[((VisualNode) nodesByLayer.get(i)[j]).getWeights().length];
                     for (int k = 0; k < ((VisualNode) nodesByLayer.get(i)[j]).getWeights().length; k++) {
@@ -431,7 +464,7 @@ public class OAPNnet {
 
             //Traverse array of nodes by layer, if the key from the file matches the current node,
             //place that bias from file into the correct node
-            for (int i = 0; i < nodesByLayer.size(); i++) {
+            for (int i = 1; i < nodesByLayer.size() - 1; i++) {
                 for (int j = 0; j < nodesByLayer.get(i).length; j++) {
                     float biasForCurrNode = 0.0f;
                     if ((line = weightBR.readLine()) != null) {
@@ -447,6 +480,16 @@ public class OAPNnet {
             }
             weightBR.close();
             biasBR.close();
+        }
+    }
+
+    public static void processTestData() {
+        for (int i = 0; i < testingData.length; i++) {
+            float[] exampleData = new float[testingData[i].length];
+            for (int j = 0; j < testingData[i].length; j++) {
+                exampleData[j] = testingData[i][j];
+            }
+            input.giveInputData(exampleData);
         }
     }
 
@@ -491,14 +534,14 @@ public class OAPNnet {
         Map<Integer, Float> newBiases;
         float[] exampleData;
         float[] out;
-        
+
         for (int i = 0; i < epoch.length; i++) {
             exampleData = new float[epoch[i].length - 1];
             for (int j = 0; j < epoch[i].length - 1; j++) {
                 exampleData[j] = epoch[i][j + 1];
             }
             input.giveInputData(exampleData);
-            while(output.buffer.isEmpty());
+            while (output.buffer.isEmpty());
             out = output.buffer.poll();
             for (int j = 0; j < out.length; j++) {
                 System.out.println("Output: " + out[j]);
@@ -749,14 +792,21 @@ public class OAPNnet {
     }
 
     public static void writeOutput() throws FileNotFoundException, IOException {
-        float[] data = output.getData();
-        float max = output.getMaxActivation();
+        float[] data;
+        while (output.buffer.isEmpty());
+        data = output.buffer.poll();
+        float max = Float.MIN_VALUE;
         float printOut = Float.MIN_VALUE;
-
+        
         for (int i = 0; i < data.length; i++) {
-            if (data[i] == max) {
+            if (data[i] > max)
+                max = data[i];
+        }
+        
+        for (int i = 0; i < data.length; i++) {
+            //if (data[i] == max) {
                 printOut = output.getCorrelatedOutput(i);
-            }
+            //}
         }
 
         outputWriter.write(Float.toString(printOut) + "\n");
