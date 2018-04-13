@@ -18,4 +18,4 @@ nbactions.xml
 /Attribute FileIOTest/build/
 */OUTPUT
 !/OAPN/datasets/*
-*/*.data
+#*/*.data
