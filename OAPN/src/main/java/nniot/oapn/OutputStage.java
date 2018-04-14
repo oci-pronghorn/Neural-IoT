@@ -11,7 +11,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,7 +22,7 @@ public class OutputStage extends PronghornStage {
     private static BufferedWriter outputFileWriter;
     private final float[] desired;
     private float[] data;
-    public Queue<float[]> buffer = new LinkedList();
+    public Queue<float[]> buffer = new ArrayDeque();
 
     public static void closeOutputFileWriter() throws IOException {
         outputFileWriter.close();
@@ -55,25 +55,11 @@ public class OutputStage extends PronghornStage {
         if (availCount() > 0) {
             data = new float[input.length];
             for (int i = 0; i < input.length; i++) {
-                float curr = SchemalessPipe.readFloat(input[i]);
+                data[i] = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
-                data[i] = curr;
             }
             buffer.add(data);
         }
-    }
-
-    public void writeOutput() throws FileNotFoundException, IOException {
-        float max = getMaxActivation();
-        float output = 0.0f;
-
-        for (int i = 0; i < data.length; i++) {
-            if (data[i] == max) {
-                output = getCorrelatedOutput(i);
-            }
-        }
-        outputFileWriter.write(Float.toString(output) + "\n");
-        outputFileWriter.flush();
     }
 
     /**
@@ -92,13 +78,7 @@ public class OutputStage extends PronghornStage {
 
         return maxActivation;
     }
-
-    /**
-     * Return an array of all activations that are coming into outputStage, and
-     * release them.
-     *
-     * @return float[] an array of all outputs currently held in the stage
-     */
+    
     public float[] getData() {
         return data;
     }
@@ -108,9 +88,14 @@ public class OutputStage extends PronghornStage {
         return avail;
     }
 
+    /**
+     * Returns the minimum number of messages waiting in this stage's input pipes.
+     * @return 
+     */
     private int messagesToConsume() {
         int results = Integer.MAX_VALUE;
         for (int i = 0; i < input.length; i++) {
+            //  / input[i].sizeOfSlabRing
             results = Math.min(results, SchemalessPipe.contentRemaining(input[i]));
         }
 
@@ -119,9 +104,5 @@ public class OutputStage extends PronghornStage {
 
     public float getCorrelatedOutput(int index) {
         return desired[index];
-    }
-    
-    public void resetData() {
-        this.data = null;
     }
 }

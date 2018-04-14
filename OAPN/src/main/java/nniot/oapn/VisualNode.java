@@ -5,7 +5,6 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.SchemalessPipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import java.util.ArrayList;
 
 public class VisualNode extends PronghornStage {
 
@@ -16,7 +15,6 @@ public class VisualNode extends PronghornStage {
     private float[] activations;
     private float activation; // activation value of this node
     private float z; // value of lastActivation * weight + bias, used in backpropogation
-    private float lastActivation; // activation of last node
 
     public VisualNode(GraphManager gm, Pipe<MessageSchemaDynamic> input, Pipe<MessageSchemaDynamic>[] output) {
         super(gm, input, output);
@@ -57,12 +55,11 @@ public class VisualNode extends PronghornStage {
         while (availCount() > 0) {
             int i = input.length;
             while (--i >= 0) {
-                this.lastActivation = SchemalessPipe.readFloat(input[i]);
+                this.activations[i] = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
-                this.activations[i] = this.lastActivation;
             }
             
-            z = dot(activations, weights) + bias;
+            this.z = dot(activations, weights) + bias;
             
             //send this value to all the down stream nodes
             int j = output.length;
@@ -157,10 +154,6 @@ public class VisualNode extends PronghornStage {
 
     public int getWeightsLength() {
         return this.weights.length;
-    }
-
-    public float getLastActivation() {
-        return this.lastActivation;
     }
 
     public float getZ() {

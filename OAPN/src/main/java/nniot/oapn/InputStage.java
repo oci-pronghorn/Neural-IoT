@@ -23,11 +23,13 @@ public class InputStage extends PronghornStage {
     }
 
     //Hands floats out to pipes below it
+    @Override
     public void run() {
         if (this.data != null)  {
-            int c = 0;
-            while (c > 0 || ((c = roomForWrite()) > 0)) {
-                c -= 1;
+//            int c = 0;
+//            while (c > 0 || ((c = roomForWrite()) > 0)) {
+//                c -= 1;
+            if (roomForWrite() > 0) {
 
                 int i = output.length;
                 while (--i >= 0) {
@@ -36,6 +38,7 @@ public class InputStage extends PronghornStage {
                 }
             }
         }
+        data = null;
     }
 
     public int roomForWrite() {
