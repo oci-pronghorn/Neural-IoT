@@ -65,7 +65,7 @@ public class OAPNnet {
     static int numHiddenNodes = 4; // default = 4
     static int numOutputNodes; // default - determined by number of classifications data can fall under
     static int numEpochs = 10; // default = 10
-    static float learningRate = 0.5f; // default = 0.5
+    static float learningRate = 3.0f; // default = 0.5
     static float[] desired;
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -103,8 +103,8 @@ public class OAPNnet {
             gm.enableTelemetry(8089);
             StageScheduler.defaultScheduler(gm).startup();
 
+            System.out.println("Updating weights and biases...");
             for (int i = 0; i < epochsSet.length; i++) {
-                System.out.println("Updating weights and biases...");
                 //printNeuralNet();
                 updateWeights(epochsSet[i], learningRate);
                 System.out.println("Finished epoch " + i + "...");
@@ -537,7 +537,7 @@ public class OAPNnet {
                 exampleData[j] = epoch[i][j + 1];
             }
             input.giveInputData(exampleData);
-            
+
             // Sometimes gets stuck in this loop - unsure how
             while (output.buffer.isEmpty()) {
                 ;
@@ -593,9 +593,9 @@ public class OAPNnet {
         for (int i = 0; i < nodes.length; i++) {
             VisualNode node = (VisualNode) nodes[i];
             if (output.getCorrelatedOutput(i) == desired) {
-                costDerivative.add(node.getActivation() - 1.0f);
+                costDerivative.add(outputs[i] - 1.0f);
             } else {
-                costDerivative.add(node.getActivation());
+                costDerivative.add(outputs[i]);
             }
             zArray.add(node.getZ());
         }

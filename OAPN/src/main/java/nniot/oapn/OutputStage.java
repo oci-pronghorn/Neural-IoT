@@ -65,6 +65,7 @@ public class OutputStage extends PronghornStage {
     /**
      * Find the max activation values of the pipes coming into this stage in order
      * to determine what class the NN thinks this example is.
+     * @return the highest value of this stage's data[] field
      */
     public float getMaxActivation() {
         float maxActivation = Float.MIN_VALUE;

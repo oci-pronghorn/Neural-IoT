@@ -52,7 +52,7 @@ public class VisualNode extends PronghornStage {
      */
     @Override
     public void run() {
-        while (availCount() > 0) {
+        if (availCount() > 0) {
             int i = input.length;
             while (--i >= 0) {
                 this.activations[i] = SchemalessPipe.readFloat(input[i]);
