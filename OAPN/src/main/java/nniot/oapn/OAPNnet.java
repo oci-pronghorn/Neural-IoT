@@ -43,7 +43,7 @@ public class OAPNnet {
     static BufferedWriter outputWriter;
     static BufferedWriter timeOutputWriter;
 
-    static String trainingDataFN = "./wineTraining.data"; // this file will already have classifications
+    static String trainingDataFN = "./dayTraining.data"; // this file will already have classifications
     static Boolean isTraining = true;
 
     static Float[][] trainingData;
@@ -418,13 +418,15 @@ public class OAPNnet {
     }
 
     public static Float[][][] generateEpochs(Float[][] inputData) {
+        int counter = 0;
         int epochSize = (int) Math.ceil(inputData.length / numEpochs);
-        epochsSet = new Float[numEpochs + 1][epochSize][numAttributes + 1];
+        // epochsSet is an array of epochs, each of which is an array of records which hold their attributes
+        epochsSet = new Float[numEpochs][epochSize][numAttributes + 1];
 
         shuffleArray(inputData);
-        for (int i = 0; i < numEpochs + 1; i++) {
+        for (int i = 0; i < numEpochs; i++) {
             for (int j = 0; j < epochSize; j++) {
-                epochsSet[i][j] = inputData[i];
+                epochsSet[i][j] = inputData[counter++];
             }
         }
 
@@ -524,7 +526,6 @@ public class OAPNnet {
      * @param epoch
      * @param learningRate
      */
-    @SuppressWarnings("empty-statement")
     public static void updateWeights(Float[][] epoch, float learningRate) {
         Map<Integer, ArrayList<Float>> newWeights;
         Map<Integer, Float> newBiases;
@@ -534,13 +535,25 @@ public class OAPNnet {
         for (int i = 0; i < epoch.length; i++) {
             exampleData = new float[epoch[i].length - 1];
             for (int j = 0; j < epoch[i].length - 1; j++) {
-                exampleData[j] = epoch[i][j + 1];
+                if (epoch[i].length > j + 1) {
+                    exampleData[j] = epoch[i][j + 1];
+                }
             }
+
+            // Feed-forward of data
             input.giveInputData(exampleData);
 
-            // Sometimes gets stuck in this loop - unsure how
+            // Wait for outputStage to return its final answers.
+            // We sleep here for 0ms because Pronghorn appears to be dictating how
+            // much CPU time the main thread receives and placing a command inside
+            // the while loop forces Pronghorn to give main some amount of CPU time, 
+            // allowing it to check the condition again?
             while (output.buffer.isEmpty()) {
-                ;
+                try {
+                    Thread.sleep(0);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
             out = output.buffer.poll();
             for (int j = 0; j < out.length; j++) {
@@ -680,7 +693,7 @@ public class OAPNnet {
 
     public static ArrayList<Float> sigmoidDerivativeArray(ArrayList<Float> arr) {
         ArrayList<Float> retArr = new ArrayList();
-        for (float i : arr) {
+        for (int i = 0; i < arr.size(); i++) {
             retArr.add(sigmoidDerivative(i));
         }
         return retArr;
@@ -691,7 +704,6 @@ public class OAPNnet {
     }
 
     public static float sigmoid(float z) {
-        //return (float) Math.log(1 + Math.exp(z));
         return 1.0f / (1.0f + (float) Math.exp(-z));
     }
 
@@ -715,9 +727,10 @@ public class OAPNnet {
         }
 
         ArrayList<Float> retArr = new ArrayList();
-        float element = 0.0f;
+        float element;
 
         for (int i = 0; i < arr1.size(); i++) {
+            element = 0.0f;
             for (int j = 0; j < arr1.get(i).size(); j++) {
                 element += arr1.get(i).get(j) * arr2.get(j);
             }
@@ -742,20 +755,6 @@ public class OAPNnet {
             }
         }
         return retMat;
-    }
-
-    public static ArrayList<Float> vectAdd(ArrayList<Float> arr1, ArrayList<Float> arr2) {
-        if (arr1.size() != arr2.size()) {
-            System.out.println("Attempted to add incompatible vectors.");
-            return null;
-        }
-
-        ArrayList<Float> retArr = new ArrayList();
-
-        for (int i = 0; i < arr1.size(); i++) {
-            retArr.add(arr1.get(i) + arr2.get(i));
-        }
-        return retArr;
     }
 
     public static ArrayList<Float> hadamardProduct(ArrayList<Float> arr1, ArrayList<Float> arr2) {

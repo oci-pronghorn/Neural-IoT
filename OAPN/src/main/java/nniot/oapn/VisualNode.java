@@ -53,8 +53,7 @@ public class VisualNode extends PronghornStage {
     @Override
     public void run() {
         if (availCount() > 0) {
-            int i = input.length;
-            while (--i >= 0) {
+            for (int i = 0; i < input.length; i++) {
                 this.activations[i] = SchemalessPipe.readFloat(input[i]);
                 SchemalessPipe.releaseReads(input[i]);
             }
@@ -62,9 +61,8 @@ public class VisualNode extends PronghornStage {
             this.z = dot(activations, weights) + bias;
             
             //send this value to all the down stream nodes
-            int j = output.length;
             this.activation = sigmoid(z);
-            while (--j >= 0) {
+            for (int j = 0; j < output.length; j++) {
                 SchemalessPipe.writeFloat(output[j], this.activation);
                 SchemalessPipe.publishWrites(output[j]);
             }

@@ -25,17 +25,13 @@ public class InputStage extends PronghornStage {
     //Hands floats out to pipes below it
     @Override
     public void run() {
-        if (this.data != null) {
-            if (roomForWrite() > 0) {
-
-                int i = output.length;
-                while (--i >= 0) {
-                    SchemalessPipe.writeFloat(output[i], data[i]);
-                    SchemalessPipe.publishWrites(output[i]);
-                }
-                
-                data = null;
+        if (this.data != null && roomForWrite() > 0) {
+            for (int i = 0; i < output.length; i++) {
+                SchemalessPipe.writeFloat(output[i], data[i]);
+                SchemalessPipe.publishWrites(output[i]);
             }
+
+            this.data = null;
         }
     }
 

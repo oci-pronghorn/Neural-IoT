@@ -96,7 +96,6 @@ public class OutputStage extends PronghornStage {
     private int messagesToConsume() {
         int results = Integer.MAX_VALUE;
         for (int i = 0; i < input.length; i++) {
-            //  / input[i].sizeOfSlabRing
             results = Math.min(results, SchemalessPipe.contentRemaining(input[i]));
         }
 
